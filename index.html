@@ -7,292 +7,35 @@
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root { --cyan: #00f3ff; --purple: #7b2cbf; --dark: #0a0e17; --glass: rgba(255,255,255,0.05); }
-    body { font-family:'Exo 2',sans-serif; background:var(--dark); color:#fff; margin:0; padding:0; }
-    header { padding:1rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; background:#111; }
-    .logo { font-family:'Orbitron'; font-size:1.5rem; color:var(--cyan); font-weight:bold; cursor:pointer; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Exo 2',sans-serif; background:var(--dark); color:#fff; overflow-x:hidden; }
+    
+    /* Header */
+    header { padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; background:#111; position:sticky; top:0; z-index:50; }
+    .logo { font-family:'Orbitron'; font-size:1.5rem; color:var(--cyan); font-weight:bold; cursor:pointer; text-transform:uppercase; letter-spacing:2px; }
+    
+    /* Layout */
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:20px; max-width:1200px; margin:0 auto; }
     @media(max-width:768px) { .grid { grid-template-columns:1fr; } }
-    .panel { background:#111; padding:15px; border-radius:10px; border:1px solid #333; }
-    .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:15px; margin-top:15px; }
-    .card { background:#1a1a1a; border-radius:8px; overflow:hidden; border:1px solid #333; position:relative; }
-    .card img { width:100%; height:100px; object-fit:cover; }
+    
+    /* Panels & Cards */
+    .panel { background:#111; padding:15px; border-radius:10px; border:1px solid #333; min-height:300px; }
+    .panel h2 { margin-bottom:15px; font-size:1.2rem; display:flex; align-items:center; gap:10px; }
+    .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:15px; }
+    .card { background:#1a1a1a; border-radius:8px; overflow:hidden; border:1px solid #333; transition:transform 0.2s; }
+    .card:hover { transform:translateY(-5px); border-color:var(--cyan); }
+    .card img { width:100%; height:90px; object-fit:cover; background:#000; }
     .card-body { padding:10px; }
-    .btn { width:100%; padding:8px; margin-top:5px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
+    .card-title { font-size:0.85rem; font-weight:600; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    
+    /* Buttons */
+    .btn { width:100%; padding:6px; margin-top:5px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.8rem; transition:0.2s; }
     .btn-watch { background:var(--cyan); color:#000; }
     .btn-dl { background:var(--purple); color:#fff; }
-    .btn-del { background:#ef4444; color:#fff; margin-top:5px; }
-    
+    .btn-del { background:#ef4444; color:#fff; width:auto; padding:2px 8px; font-size:0.7rem; }
+    .btn:hover { opacity:0.9; }
+
     /* Modals */
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; overflow-y:auto; }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; overflow-y:auto; backdrop-filter:blur(5px); }
     .modal.active { display:flex; }
-    .modal-content { background:#111; padding:20px; border-radius:10px; width:90%; max-width:800px; border:1px solid var(--cyan); position:relative; margin: 20px 0; }
-    input, select { width:100%; padding:10px; margin:5px 0; background:#222; border:1px solid #444; color:#fff; border-radius:5px; box-sizing:border-box; }
-    iframe, video { width:100%; aspect-ratio:16/9; border:none; background:#000; }
-    
-    /* Admin Table */
-    table { width:100%; border-collapse:collapse; margin-top:15px; font-size:0.8rem; }
-    th, td { padding:8px; text-align:left; border-bottom:1px solid #333; }
-    th { color:var(--cyan); }
-    
-    #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:5px; opacity:0; transition:0.3s; pointer-events:none; z-index:200; }
-    #toast.show { opacity:1; bottom:40px; }
-    
-    .admin-toggle { position:fixed; bottom:10px; right:10px; opacity:0.1; cursor:pointer; }
-    .admin-toggle:hover { opacity:1; }
-  </style>
-</head>
-<body>
-
-<header>
-  <div class="logo" onclick="location.reload()">CINEMA-LIVE</div>
-  <div style="display:flex; gap:10px; align-items:center;">
-    <button id="auth-btn" onclick="openModal('auth-modal')" style="background:transparent; border:1px solid var(--cyan); color:var(--cyan); padding:5px 15px; border-radius:20px; cursor:pointer;">Login</button>
-    <div id="user-info" style="display:none; color:var(--cyan);">🔹 <span id="t-count">0</span></div>
-  </div>
-</header>
-
-<div class="grid">
-  <div class="panel">
-    <h2 style="color:var(--cyan)">🎥 Full Movies</h2>
-    <div id="m-cards" class="cards">Loading...</div>
-  </div>
-  <div class="panel">
-    <h2 style="color:var(--purple)">🎞️ Trailers</h2>
-    <div id="t-cards" class="cards">Loading...</div>
-  </div>
-</div>
-
-<!-- Auth Modal -->
-<div id="auth-modal" class="modal">
-  <div class="modal-content" style="max-width:400px;">
-    <h2 style="color:var(--cyan)">Register / Login</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="pass" placeholder="Password">
-    <button class="btn btn-watch" onclick="register()">Sign Up</button>
-    <button onclick="closeModal('auth-modal')" style="margin-top:10px; background:none; border:none; color:#888; cursor:pointer;">Close</button>
-  </div>
-</div>
-
-<!-- Video Modal -->
-<div id="video-modal" class="modal">
-  <div class="modal-content">
-    <button onclick="closeModal('video-modal')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:#fff; border:none; padding:5px 10px; cursor:pointer; z-index:10;">X</button>
-    <div id="player-container"></div>
-  </div>
-</div>
-
-<!-- Admin Modal -->
-<div id="admin-modal" class="modal">
-  <div class="modal-content" style="max-width:1000px;">
-    <button onclick="closeModal('admin-modal')" style="position:absolute; top:10px; right:10px; background:red; color:#fff; border:none; padding:5px 10px; cursor:pointer;">X</button>
-    <h2 style="color:var(--cyan)">🕵️ Admin Dashboard</h2>
-    
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
-      <!-- Add Movie Form -->
-      <div style="background:#1a1a1a; padding:15px; border-radius:8px;">
-        <h3>Add New Movie</h3>
-        <input id="new-title" placeholder="Title">
-        <input id="new-year" type="number" placeholder="Year">
-        <select id="new-type"><option value="full_movie">Full Movie</option><option value="trailer">Trailer</option></select>
-        <input id="new-yt" placeholder="YouTube ID (optional)">
-        <input id="new-url" placeholder="Direct URL / Archive Link (optional)">
-        <input id="new-thumb" placeholder="Thumbnail URL">
-        <input id="new-dl" placeholder="Download Link (MP4)">
-        <button class="btn btn-watch" onclick="addMovie()">Add Movie</button>
-      </div>
-      
-      <!-- Movie List -->
-      <div style="background:#1a1a1a; padding:15px; border-radius:8px; max-height:400px; overflow-y:auto;">
-        <h3>Manage Library</h3>
-        <table id="admin-table">
-          <thead><tr><th>Title</th><th>Type</th><th>Action</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="toast"></div>
-
-<script>
-  const API = window.location.origin + "/api";
-  const ADMIN_SECRET = "cinema-admin-2025"; // Must match server.py
-  let token = localStorage.getItem("cinema_token");
-  let tokens = 0;
-
-  function toast(msg) {
-    const t = document.getElementById("toast");
-    t.textContent = msg; t.classList.add("show");
-    setTimeout(() => t.classList.remove("show"), 3000);
-  }
-
-  function openModal(id) { document.getElementById(id).classList.add("active"); }
-  function closeModal(id) { 
-    document.getElementById(id).classList.remove("active"); 
-    document.getElementById("player-container").innerHTML = "";
-  }
-
-  // --- User Functions ---
-  async function register() {
-    const e = document.getElementById("email").value;
-    const p = document.getElementById("pass").value;
-    try {
-      const res = await fetch(`${API}/auth/register`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: e, password: p })
-      });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data.detail);
-      localStorage.setItem("cinema_token", data.token);
-      token = data.token; tokens = data.tokens;
-      updateUI(); closeModal("auth-modal");
-      toast("✅ Registered! 5 Tokens Added.");
-    } catch(err) { toast("❌ " + err.message); }
-  }
-
-  async function loadMovies() {
-    try {
-      const res = await fetch(`${API}/movies/full`);
-      const data = await res.json();
-      document.getElementById("m-cards").innerHTML = data.map(m => createCard(m)).join('');
-    } catch(err) { document.getElementById("m-cards").innerHTML = "Error loading."; }
-  }
-
-  async function loadTrailers() {
-    try {
-      const res = await fetch(`${API}/movies/trailers`);
-      const data = await res.json();
-      document.getElementById("t-cards").innerHTML = data.map(m => createCard(m)).join('');
-    } catch(err) { console.error(err); }
-  }
-
-  function createCard(m) {
-    return `
-      <div class="card">
-        <img src="${m.thumbnail}" onerror="this.src='https://via.placeholder.com/150x100?text=No+Img'">
-        <div class="card-body">
-          <div style="font-size:0.9rem; margin-bottom:5px;">${m.title}</div>
-          <button class="btn btn-watch" onclick='play(${JSON.stringify(m)})'>▶ Watch</button>
-          ${m.direct_download && m.direct_download !== 'stream_only' ? `<button class="btn btn-dl" onclick="download(${m.id})">💾 DL</button>` : ''}
-        </div>
-      </div>
-    `;
-  }
-
-  function play(movie) {
-    const container = document.getElementById("player-container");
-    if (movie.youtube_id && movie.youtube_id.trim() !== "") {
-      container.innerHTML = `<iframe src="https://www.youtube.com/embed/${movie.youtube_id}?autoplay=1&rel=0" allowfullscreen></iframe>`;
-    } else if (movie.direct_download && movie.direct_download.endsWith('.mp4')) {
-      container.innerHTML = `<video controls autoplay><source src="${movie.direct_download}" type="video/mp4"></video>`;
-    } else if (movie.url) {
-      toast("Opening external link...");
-      window.open(movie.url, "_blank");
-      return;
-    } else {
-      toast("❌ No video source");
-      return;
-    }
-    openModal("video-modal");
-  }
-
-  async function download(id) {
-    if(!token) { toast("🔒 Please Login"); return openModal("auth-modal"); }
-    try {
-      const res = await fetch(`${API}/movies/download/${id}`, { method: "POST", headers: { "Authorization": token } });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data.detail);
-      window.open(data.url, "_blank");
-      toast("✅ Download Started!");
-    } catch(err) { toast("❌ " + err.message); }
-  }
-
-  function updateUI() {
-    if(token) {
-      document.getElementById("auth-btn").style.display = "none";
-      document.getElementById("user-info").style.display = "block";
-      fetch(`${API}/user/status`, {headers:{Authorization:token}})
-        .then(r=>r.json()).then(d=>{ document.getElementById("t-count").textContent = d.tokens; });
-    }
-  }
-
-  // --- Admin Functions ---
-  document.addEventListener("keydown", e => {
-    if(e.ctrlKey && e.shiftKey && e.key === "A") {
-      e.preventDefault();
-      openModal("admin-modal");
-      loadAdminMovies();
-    }
-  });
-
-  async function loadAdminMovies() {
-    try {
-      const res = await fetch(`${API}/admin/movies`, { headers: { "X-Secret": ADMIN_SECRET } });
-      const data = await res.json();
-      const tbody = document.querySelector("#admin-table tbody");
-      tbody.innerHTML = data.map(m => `
-        <tr>
-          <td>${m.title}</td>
-          <td>${m.content_type}</td>
-          <td><button class="btn btn-del" style="width:auto; padding:2px 8px;" onclick="deleteMovie(${m.id})">Del</button></td>
-        </tr>
-      `).join('');
-    } catch(err) { toast("❌ Admin Auth Failed"); }
-  }
-
-  async function addMovie() {
-    const payload = {
-      title: document.getElementById("new-title").value,
-      year: parseInt(document.getElementById("new-year").value) || 2024,
-      category: "General",
-      content_type: document.getElementById("new-type").value,
-      license_type: "Custom",
-      youtube_id: document.getElementById("new-yt").value,
-      url: document.getElementById("new-url").value,
-      thumbnail: document.getElementById("new-thumb").value,
-      duration: "PT0M",
-      direct_download: document.getElementById("new-dl").value
-    };
-    
-    try {
-      const res = await fetch(`${API}/admin/movies`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Secret": ADMIN_SECRET },
-        body: JSON.stringify(payload)
-      });
-      if(res.ok) {
-        toast("✅ Movie Added");
-        loadAdminMovies();
-        loadMovies(); loadTrailers(); // Refresh public view
-        // Clear inputs
-        document.querySelectorAll("#admin-modal input").forEach(i => i.value = "");
-      } else {
-        toast("❌ Failed to add");
-      }
-    } catch(err) { toast("❌ Error"); }
-  }
-
-  async function deleteMovie(id) {
-    if(!confirm("Delete this movie?")) return;
-    try {
-      const res = await fetch(`${API}/admin/movies/${id}`, {
-        method: "DELETE",
-        headers: { "X-Secret": ADMIN_SECRET }
-      });
-      if(res.ok) {
-        toast("✅ Deleted");
-        loadAdminMovies();
-        loadMovies(); loadTrailers();
-      }
-    } catch(err) { toast("❌ Error"); }
-  }
-
-  window.onload = () => {
-    loadMovies();
-    loadTrailers();
-    if(token) updateUI();
-  };
-</script>
-</body>
-</html>
+    .modal-content { background:#111; padding:20px; border-radius:10px; width:90%; max-width:500px; border:1px solid var(--cyan); position:relative; box-shadow:0 0 2
