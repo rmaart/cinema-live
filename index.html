@@ -8,15 +8,15 @@
   <style>
     :root { --cyan: #00f3ff; --purple: #7b2cbf; --dark: #0a0e17; }
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Exo 2',sans-serif; background:var(--dark); color:#fff; overflow-x:hidden; }
-    header { padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; background:#111; }
-    .logo { font-family:'Orbitron'; font-size:1.5rem; color:var(--cyan); font-weight:bold; cursor:pointer; }
+    body { font-family:'Exo 2',sans-serif; background:var(--dark); color:#fff; }
+    header { padding:1rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; background:#111; }
+    .logo { font-family:'Orbitron'; font-size:1.5rem; color:var(--cyan); font-weight:bold; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:20px; max-width:1200px; margin:0 auto; }
     @media(max-width:768px) { .grid { grid-template-columns:1fr; } }
-    .panel { background:#111; padding:15px; border-radius:10px; border:1px solid #333; min-height:300px; }
+    .panel { background:#111; padding:15px; border-radius:10px; border:1px solid #333; }
     .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:15px; }
     .card { background:#1a1a1a; border-radius:8px; overflow:hidden; border:1px solid #333; }
-    .card img { width:100%; height:90px; object-fit:cover; background:#000; }
+    .card img { width:100%; height:90px; object-fit:cover; }
     .card-body { padding:10px; }
     .btn { width:100%; padding:8px; margin-top:5px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
     .btn-watch { background:var(--cyan); color:#000; }
@@ -34,13 +34,19 @@
     #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:5px; opacity:0; transition:0.3s; pointer-events:none; z-index:200; }
     #toast.show { opacity:1; bottom:40px; }
     .close-btn { position:absolute; top:10px; right:15px; font-size:1.5rem; cursor:pointer; color:#888; }
+    
+    /* Smart Add Section */
+    .smart-box { background:#1a1a1a; padding:15px; border-radius:8px; border:1px dashed var(--cyan); margin-bottom:20px; }
+    .smart-input-group { display:flex; gap:10px; }
+    .smart-input-group input { flex:1; }
+    .preview-img { width:100%; height:150px; object-fit:cover; border-radius:5px; margin-top:10px; display:none; }
   </style>
 </head>
 <body>
 
 <header>
   <div class="logo" onclick="location.reload()">CINEMA-LIVE</div>
-  <button id="auth-btn" onclick="openModal('auth-modal')" style="background:transparent; border:1px solid var(--cyan); color:var(--cyan); padding:5px 15px; border-radius:20px; cursor:pointer;">Login / Register</button>
+  <button id="auth-btn" onclick="openModal('auth-modal')" style="background:transparent; border:1px solid var(--cyan); color:var(--cyan); padding:5px 15px; border-radius:20px; cursor:pointer;">Login</button>
   <div id="user-info" style="display:none; color:var(--cyan); font-weight:bold;">🔹 <span id="t-count">0</span></div>
 </header>
 
@@ -53,9 +59,8 @@
 <div id="auth-modal" class="modal">
   <div class="modal-content">
     <span class="close-btn" onclick="closeModal('auth-modal')">&times;</span>
-    <h2 style="color:var(--cyan)">Welcome</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="pass" placeholder="Password">
+    <h2 style="color:var(--cyan)">Register</h2>
+    <input type="email" id="email" placeholder="Email"><input type="password" id="pass" placeholder="Password">
     <button class="btn btn-watch" onclick="register()">Sign Up</button>
   </div>
 </div>
@@ -73,17 +78,36 @@
   <div class="modal-content modal-lg">
     <span class="close-btn" onclick="closeModal('admin-modal')">&times;</span>
     <h2 style="color:var(--cyan)">🕵️ Admin Dashboard</h2>
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-top:20px;">
-      <div style="background:#1a1a1a; padding:15px; border-radius:8px;">
-        <h3>Add Movie</h3>
-        <input id="new-title" placeholder="Title"><input id="new-year" type="number" placeholder="Year">
-        <select id="new-type"><option value="full_movie">Full Movie</option><option value="trailer">Trailer</option></select>
-        <input id="new-yt" placeholder="YouTube ID"><input id="new-thumb" placeholder="Thumbnail URL"><input id="new-dl" placeholder="MP4 Link">
-        <button class="btn btn-watch" onclick="addMovie()">Add</button>
+    
+    <!-- SMART ADD SECTION -->
+    <div class="smart-box">
+      <h3 style="color:var(--cyan); margin-bottom:10px;">🤖 AI Smart Add (Paste Link)</h3>
+      <div class="smart-input-group">
+        <input id="smart-url" placeholder="Paste YouTube, Archive.org, or MP4 link...">
+        <select id="smart-type" style="width:150px;"><option value="full_movie">Movie</option><option value="trailer">Trailer</option></select>
+        <button class="btn btn-watch" style="width:100px;" onclick="analyzeLink()">Analyze</button>
       </div>
+      
+      <!-- Preview Area -->
+      <div id="smart-preview" style="display:none; margin-top:15px; border-top:1px solid #333; padding-top:15px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+          <div>
+            <img id="preview-thumb" class="preview-img" style="display:block;">
+          </div>
+          <div>
+            <input id="auto-title" placeholder="Detected Title" readonly style="background:#333;">
+            <input id="auto-yt" placeholder="YouTube ID" readonly style="background:#333;">
+            <input id="auto-dl" placeholder="Download Link" readonly style="background:#333;">
+            <button class="btn btn-watch" onclick="confirmAdd()">✅ Confirm & Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
       <div style="background:#1a1a1a; padding:15px; border-radius:8px;">
-        <h3>🤖 Agent</h3>
-        <button class="btn" style="background:var(--purple); color:#fff;" onclick="triggerAgent()">Run Agent</button>
+        <h3>🤖 Agent Logs</h3>
+        <button class="btn" style="background:var(--purple); color:#fff; margin-bottom:10px;" onclick="triggerAgent()">Run Agent</button>
         <div class="log-container" id="agent-logs">Logs...</div>
       </div>
       <div style="background:#1a1a1a; padding:15px; border-radius:8px; max-height:400px; overflow-y:auto;">
@@ -100,6 +124,7 @@
   const API = window.location.origin + "/api";
   const ADMIN_SECRET = "cinema-admin-2025";
   let token = localStorage.getItem("cinema_token");
+  let currentSmartData = null;
 
   function toast(msg) { const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000); }
   function openModal(id) { document.getElementById(id).classList.add("active"); if(id==='admin-modal'){loadAdminMovies();loadLogs();} }
@@ -150,15 +175,56 @@
     if(token){ document.getElementById("auth-btn").style.display="none"; document.getElementById("user-info").style.display="block"; }
   }
 
-  // Admin
+  // --- SMART AI FUNCTIONS ---
+  async function analyzeLink() {
+    const url = document.getElementById("smart-url").value;
+    const type = document.getElementById("smart-type").value;
+    if(!url) return toast("Enter a URL");
+
+    toast("🤖 Analyzing link...");
+    try {
+      const res = await fetch(`${API}/admin/smart-analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Secret": ADMIN_SECRET },
+        body: JSON.stringify({ url: url, content_type: type })
+      });
+      const data = await res.json();
+      
+      // Show Preview
+      currentSmartData = data;
+      document.getElementById("smart-preview").style.display = "block";
+      document.getElementById("preview-thumb").src = data.thumbnail;
+      document.getElementById("auto-title").value = data.title;
+      document.getElementById("auto-yt").value = data.youtube_id || "N/A";
+      document.getElementById("auto-dl").value = data.direct_download || "N/A";
+      
+    } catch(err) { toast("❌ Could not analyze link"); }
+  }
+
+  async function confirmAdd() {
+    if(!currentSmartData) return;
+    const type = document.getElementById("smart-type").value;
+    try {
+      const res = await fetch(`${API}/admin/smart-add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Secret": ADMIN_SECRET },
+        body: JSON.stringify({ url: currentSmartData.url, content_type: type })
+      });
+      if(res.ok) {
+        toast("✅ Movie Added by AI!");
+        document.getElementById("smart-preview").style.display = "none";
+        document.getElementById("smart-url").value = "";
+        loadAdminMovies();
+        loadMovies(); loadTrailers();
+      }
+    } catch(err) { toast("❌ Failed to add"); }
+  }
+
+  // Admin Helpers
   document.addEventListener("keydown",e=>{if(e.ctrlKey&&e.shiftKey&&e.key==="A"){e.preventDefault();openModal("admin-modal");}});
   async function loadAdminMovies(){
     try{const r=await fetch(`${API}/admin/movies`,{headers:{"X-Secret":ADMIN_SECRET}});const d=await r.json();
     document.querySelector("#admin-table tbody").innerHTML=d.map(m=>`<tr><td>${m.title}</td><td><button class="btn btn-dl" style="background:red;width:auto;padding:2px 5px;" onclick="deleteMovie(${m.id})">Del</button></td></tr>`).join('');}catch(err){}
-  }
-  async function addMovie(){
-    const p={title:document.getElementById("new-title").value,year:2024,category:"Gen",content_type:document.getElementById("new-type").value,license_type:"CC",youtube_id:document.getElementById("new-yt").value,url:"",thumbnail:document.getElementById("new-thumb").value,duration:"",direct_download:document.getElementById("new-dl").value};
-    try{await fetch(`${API}/admin/movies`,{method:"POST",headers:{"Content-Type":"application/json","X-Secret":ADMIN_SECRET},body:JSON.stringify(p)});toast("✅ Added");loadAdminMovies();loadMovies();}catch(err){toast("❌ Error");}
   }
   async function deleteMovie(id){if(confirm("Delete?")){await fetch(`${API}/admin/movies/${id}`,{method:"DELETE",headers:{"X-Secret":ADMIN_SECRET}});loadAdminMovies();loadMovies();}}
   async function triggerAgent(){toast("🤖 Running...");await fetch(`${API}/admin/trigger-agent`,{method:"POST",headers:{"X-Secret":ADMIN_SECRET}});setTimeout(loadLogs,1000);}
