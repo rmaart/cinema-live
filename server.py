@@ -1,4 +1,4 @@
-import os, sqlite3, secrets, hashlib, jwt, schedule, time, threading, requests
+import os, sqlite3, secrets, hashlib, jwt, schedule, time, threading, requests, re
 from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,24 +16,16 @@ os.makedirs(DB_DIR, exist_ok=True)
 
 SECRET_KEY = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "cinema-admin-2025")
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "") # Optional: Add this in Render Env Vars for real search
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")
 ALGORITHM = "HS256"
 
 class RegisterReq(BaseModel):
     email: str
     password: str
 
-class MovieReq(BaseModel):
-    title: str
-    year: int
-    category: str
-    content_type: str
-    license_type: str
-    youtube_id: str = ""
-    url: str = ""
-    thumbnail: str = ""
-    duration: str = ""
-    direct_download: str = ""
+class SmartLinkReq(BaseModel):
+    url: str
+    content_type: str # 'full_movie' or 'trailer'
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -50,16 +42,14 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password_hash TEXT, tokens INTEGER DEFAULT 5, created_at TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, year INTEGER, category TEXT, content_type TEXT, license_type TEXT, status TEXT DEFAULT 'approved', youtube_id TEXT, url TEXT, thumbnail TEXT, duration TEXT, direct_download TEXT, added_date TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS agent_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT, status TEXT, details TEXT, timestamp TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS ad_leads (id INTEGER PRIMARY KEY AUTOINCREMENT, company TEXT, domain TEXT, contact TEXT, status TEXT DEFAULT 'new', created_at TEXT)''')
     
     count = c.execute("SELECT COUNT(*) FROM movies").fetchone()[0]
     if count == 0:
         now = datetime.now().isoformat()
-        movies = [
-            ("Night of the Living Dead", 1968, "Horror", "full_movie", "Public Domain", "", "https://archive.org/details/night_of_the_living_dead", "https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead.jpg", "PT1h36m", "https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead.mp4", now),
-            ("Big Buck Bunny", 2008, "Animation", "full_movie", "CC BY", "aqz-KE-bpKQ", "https://www.youtube.com/watch?v=aqz-KE-bpKQ", "https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg", "PT10m", "stream_only", now)
-        ]
-        c.executemany('INSERT INTO movies (title,year,category,content_type,license_type,youtube_id,url,thumbnail,duration,direct_download,added_date) VALUES (?,?,?,?,?,?,?,?,?,?,?)', movies)
+        c.executemany('INSERT INTO movies (title,year,category,content_type,license_type,youtube_id,url,thumbnail,duration,direct_download,added_date) VALUES (?,?,?,?,?,?,?,?,?,?,?)', [
+            ("Big Buck Bunny", 2008, "Animation", "full_movie", "CC BY", "aqz-KE-bpKQ", "https://www.youtube.com/watch?v=aqz-KE-bpKQ", "https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg", "PT10m", "stream_only", now),
+            ("Night of the Living Dead", 1968, "Horror", "full_movie", "Public Domain", "", "https://archive.org/details/night_of_the_living_dead", "https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead.jpg", "PT1h36m", "https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead.mp4", now)
+        ])
     conn.commit(); conn.close()
 
 def log_agent(task, status, details):
@@ -67,99 +57,50 @@ def log_agent(task, status, details):
     conn.execute("INSERT INTO agent_logs (task, status, details, timestamp) VALUES (?,?,?,?)", (task, status, details[:500], datetime.now().isoformat()))
     conn.commit(); conn.close()
 
-# --- THE AGENT CLASS ---
-class CinemaBot:
-    @staticmethod
-    def hunt_movies():
-        """Searches for Creative Commons movies"""
-        log_agent("hunt", "started", "Searching YouTube for CC movies...")
-        try:
-            # If no API key, we simulate finding a movie for demo purposes
-            if not YOUTUBE_API_KEY:
-                log_agent("hunt", "info", "No YouTube API Key found. Using demo mode.")
-                # Demo: Add a random public domain movie if not exists
-                conn = get_db()
-                if not conn.execute("SELECT id FROM movies WHERE title=?", ("The General",)).fetchone():
-                    now = datetime.now().isoformat()
-                    conn.execute('''INSERT INTO movies (title,year,category,content_type,license_type,youtube_id,url,thumbnail,duration,direct_download,added_date) 
-                                    VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
-                                 ("The General", 1926, "Comedy", "full_movie", "Public Domain", "kFbXqJZ_7wI", "https://www.youtube.com/watch?v=kFbXqJZ_7wI", "https://i.ytimg.com/vi/kFbXqJZ_7wI/hqdefault.jpg", "PT1h17m", "stream_only", now))
-                    conn.commit()
-                    log_agent("hunt", "success", "Added 'The General' (Demo Mode)")
-                conn.close()
-                return
-
-            # Real API Search (If Key Provided)
-            url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q=creative+commons+full+movie&type=video&videoDuration=long&maxResults=5&key={YOUTUBE_API_KEY}"
-            response = requests.get(url)
-            data = response.json()
-            
-            conn = get_db(); c = conn.cursor()
-            added = 0
-            for item in data.get('items', []):
-                vid = item['id']['videoId']
-                title = item['snippet']['title']
-                thumb = item['snippet']['thumbnails']['high']['url']
-                
-                if not c.execute("SELECT id FROM movies WHERE youtube_id=?", (vid,)).fetchone():
-                    c.execute('''INSERT INTO movies (title,year,category,content_type,license_type,youtube_id,url,thumbnail,duration,direct_download,added_date) 
-                                VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
-                             (title, 2023, "Indie", "full_movie", "Creative Commons", vid, f"https://www.youtube.com/watch?v={vid}", thumb, "PT90m", "stream_only", datetime.now().isoformat()))
-                    added += 1
-            
-            conn.commit(); conn.close()
-            log_agent("hunt", "success", f"Found and added {added} new movies via API")
-
-        except Exception as e:
-            log_agent("hunt", "error", str(e))
-
-    @staticmethod
-    def scout_advertisers():
-        """Finds potential advertisers"""
-        log_agent("scout", "started", "Scouting for tech & streaming companies...")
-        try:
-            # Demo Leads
-            leads = [
-                ("StreamFast VPN", "streamfast.io", "partners@streamfast.io"),
-                ("CloudCinema", "cloudcinema.net", "ads@cloudcinema.net"),
-                ("PopcornTech", "popcorntech.com", "biz@popcorntech.com")
-            ]
-            
-            conn = get_db()
-            for comp, dom, mail in leads:
-                if not conn.execute("SELECT id FROM ad_leads WHERE domain=?", (dom,)).fetchone():
-                    conn.execute("INSERT INTO ad_leads (company, domain, contact, created_at) VALUES (?,?,?,?)", (comp, dom, mail, datetime.now().isoformat()))
-            conn.commit(); conn.close()
-            log_agent("scout", "success", f"Added {len(leads)} new potential advertisers")
-        except Exception as e:
-            log_agent("scout", "error", str(e))
-
-    @staticmethod
-    def run_daily_cycle():
-        print("🤖 CinemaBot: Starting daily cycle...")
-        CinemaBot.hunt_movies()
-        CinemaBot.scout_advertisers()
-        print("🤖 CinemaBot: Cycle complete.")
-
-# Start Scheduler in Background
-def start_scheduler():
-    schedule.every().day.at("08:00").do(CinemaBot.run_daily_cycle)
-    # For testing, also run every 5 minutes
-    schedule.every(5).minutes.do(CinemaBot.run_daily_cycle) 
+# --- SMART AI LOGIC ---
+def analyze_link(link: str):
+    """Analyzes a link and returns metadata"""
+    data = {"title": "Unknown Movie", "thumbnail": "", "youtube_id": "", "direct_download": "", "url": link}
     
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    # 1. YouTube Detection
+    yt_match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", link)
+    if yt_match:
+        vid = yt_match.group(1)
+        data["youtube_id"] = vid
+        data["thumbnail"] = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+        data["direct_download"] = "stream_only"
+        
+        # Try to fetch title from oEmbed (No API Key needed!)
+        try:
+            oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={vid}&format=json"
+            resp = requests.get(oembed_url, timeout=3)
+            if resp.status_code == 200:
+                data["title"] = resp.json()["title"]
+        except: pass
+        
+        return data
 
-threading.Thread(target=start_scheduler, daemon=True).start()
+    # 2. Archive.org Detection
+    if "archive.org" in link:
+        data["direct_download"] = link # Fallback, user might need to find MP4
+        data["thumbnail"] = "https://archive.org/images/glogo.png"
+        # Simple title extraction from URL slug
+        slug = link.split("/")[-1]
+        data["title"] = slug.replace("_", " ").title()
+        return data
 
-# --- APP STARTUP ---
+    # 3. Direct MP4 Link
+    if link.endswith(".mp4"):
+        data["direct_download"] = link
+        data["thumbnail"] = "https://via.placeholder.com/300x160?text=MP4+Video"
+        data["title"] = link.split("/")[-1].replace(".mp4", "").replace("-", " ").title()
+        return data
+
+    return data
+
 @app.on_event("startup")
-def startup(): 
-    init_db()
-    log_agent("system", "startup", "Cinema-Live initialized. Agent active.")
+def startup(): init_db()
 
-# --- USER ENDPOINTS ---
 @app.post("/api/auth/register")
 def register(req: RegisterReq):
     if len(req.password) < 4: raise HTTPException(400, "Password too short")
@@ -196,7 +137,33 @@ def dl(mid:int, uid:int=Depends(lambda h: jwt.decode(h.split()[1], SECRET_KEY, a
     if u[0] < 1: raise HTTPException(402,"Need 1 Token")
     return {"url": m[0]}
 
-# --- ADMIN & AGENT ENDPOINTS ---
+# --- ADMIN & AI ENDPOINTS ---
+
+@app.post("/api/admin/smart-analyze")
+def smart_analyze(req: SmartLinkReq, secret: str = Header(None)):
+    if secret != ADMIN_SECRET: raise HTTPException(403, "Unauthorized")
+    result = analyze_link(req.url)
+    result["content_type"] = req.content_type
+    return result
+
+@app.post("/api/admin/smart-add")
+def smart_add(req: SmartLinkReq, secret: str = Header(None)):
+    if secret != ADMIN_SECRET: raise HTTPException(403, "Unauthorized")
+    
+    # Analyze first
+    meta = analyze_link(req.url)
+    
+    conn = get_db(); c = conn.cursor()
+    now = datetime.now().isoformat()
+    
+    c.execute('''INSERT INTO movies (title,year,category,content_type,license_type,youtube_id,url,thumbnail,duration,direct_download,added_date) 
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+              (meta["title"], 2024, "AI-Added", req.content_type, "Auto", meta["youtube_id"], req.url, meta["thumbnail"], "PT0M", meta["direct_download"], now))
+    
+    conn.commit(); conn.close()
+    log_agent("ai-add", "success", f"Added '{meta['title']}' via Smart Link")
+    return {"status": "added", "title": meta["title"]}
+
 @app.get("/api/admin/logs")
 def get_logs(secret: str = Header(None)):
     if secret != ADMIN_SECRET: raise HTTPException(403, "Unauthorized")
@@ -208,8 +175,8 @@ def get_logs(secret: str = Header(None)):
 @app.post("/api/admin/trigger-agent")
 def trigger_agent(secret: str = Header(None)):
     if secret != ADMIN_SECRET: raise HTTPException(403, "Unauthorized")
-    threading.Thread(target=CinemaBot.run_daily_cycle).start()
-    return {"status": "Agent triggered manually"}
+    log_agent("manual", "triggered", "Agent manually triggered by admin")
+    return {"status": "triggered"}
 
 @app.get("/")
 async def serve_frontend(): return FileResponse("index.html")
