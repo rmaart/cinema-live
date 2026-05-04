@@ -6,161 +6,188 @@
   <title>Cinema-Live</title>
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    :root { --cyan: #00f3ff; --purple: #7b2cbf; --dark: #0a0e17; --glass: rgba(255,255,255,0.08); }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Exo 2',sans-serif; background:var(--dark); color:#fff; overflow-x:hidden; }
-    header { padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(0,243,255,0.3); backdrop-filter:blur(10px); position:sticky; top:0; z-index:100; background:rgba(10,14,23,0.9); }
-    .logo { font-family:'Orbitron',sans-serif; font-size:1.6rem; font-weight:700; color:var(--cyan); }
-    #auth-btn { background:transparent; border:1px solid var(--cyan); color:var(--cyan); padding:0.5rem 1rem; border-radius:20px; cursor:pointer; }
-    #token-widget { display:none; position:fixed; top:15px; right:20px; background:var(--glass); border:1px solid var(--cyan); border-radius:50px; padding:0.5rem 1.2rem; align-items:center; gap:8px; cursor:pointer; }
-    .grid { max-width:1100px; margin:0 auto; padding:1.5rem; display:grid; gap:1.5rem; grid-template-columns:1fr 1fr; }
-    .panel { background:var(--glass); border:1px solid rgba(0,243,255,0.3); border-radius:16px; padding:1.2rem; }
-    .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:1rem; }
-    .card { background:rgba(255,255,255,0.04); border:1px solid rgba(0,243,255,0.15); border-radius:12px; overflow:hidden; cursor:pointer; transition:0.3s; }
-    .card:hover { transform:translateY(-5px); box-shadow:0 5px 15px rgba(0,243,255,0.2); }
-    .card img { width:100%; height:100px; object-fit:cover; background:#111; }
-    .card-body { padding:0.7rem; }
-    .btn-group { display:flex; gap:0.5rem; margin-top:0.5rem; }
-    .btn { flex:1; border:none; padding:0.4rem; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:600; }
-    .btn-watch { background:var(--cyan); color:var(--dark); }
+    :root { --cyan: #00f3ff; --purple: #7b2cbf; --dark: #0a0e17; }
+    body { font-family:'Exo 2',sans-serif; background:var(--dark); color:#fff; margin:0; padding:0; }
+    header { padding:1rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; }
+    .logo { font-family:'Orbitron'; font-size:1.5rem; color:var(--cyan); font-weight:bold; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:20px; max-width:1200px; margin:0 auto; }
+    @media(max-width:768px) { .grid { grid-template-columns:1fr; } }
+    .panel { background:#111; padding:15px; border-radius:10px; border:1px solid #333; }
+    .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:15px; margin-top:15px; }
+    .card { background:#1a1a1a; border-radius:8px; overflow:hidden; border:1px solid #333; }
+    .card img { width:100%; height:100px; object-fit:cover; }
+    .card-body { padding:10px; }
+    .btn { width:100%; padding:8px; margin-top:5px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
+    .btn-watch { background:var(--cyan); color:#000; }
     .btn-dl { background:var(--purple); color:#fff; }
-    
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:200; align-items:center; justify-content:center; }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; }
     .modal.active { display:flex; }
-    .modal-content { background:var(--dark); border:1px solid var(--cyan); border-radius:16px; padding:1.5rem; max-width:400px; width:90%; text-align:center; position:relative; }
-    .close { position:absolute; top:10px; right:15px; font-size:1.5rem; cursor:pointer; color:#888; }
-    input { width:100%; padding:0.8rem; background:#111; border:1px solid #444; border-radius:6px; color:#fff; margin:0.5rem 0; }
-    .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--dark); border:1px solid var(--cyan); padding:0.7rem 1.2rem; border-radius:8px; z-index:300; opacity:0; transition:0.3s; }
-    .toast.show { opacity:1; transform:translateX(-50%) translateY(-10px); }
+    .modal-content { background:#111; padding:20px; border-radius:10px; width:90%; max-width:400px; text-align:center; border:1px solid var(--cyan); }
+    input { width:100%; padding:10px; margin:10px 0; background:#222; border:1px solid #444; color:#fff; border-radius:5px; }
+    #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:5px; opacity:0; transition:0.3s; pointer-events:none; }
+    #toast.show { opacity:1; bottom:40px; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="logo">CINEMA-LIVE</div>
-    <button id="auth-btn" onclick="openModal('auth-modal')">Login / Register</button>
-    <div id="token-widget"><span>🔹</span><span id="t-count">0</span></div>
-  </header>
 
-  <div class="grid">
-    <div class="panel"><h2 style="color:var(--cyan);">🎥 Movies</h2><div class="cards" id="m-cards"></div></div>
-    <div class="panel"><h2 style="color:var(--purple);">🎞️ Trailers</h2><div class="cards" id="t-cards"></div></div>
+<header>
+  <div class="logo">CINEMA-LIVE</div>
+  <button id="auth-btn" onclick="openModal('auth-modal')" style="background:transparent; border:1px solid var(--cyan); color:var(--cyan); padding:5px 15px; border-radius:20px; cursor:pointer;">Login</button>
+  <div id="user-info" style="display:none; color:var(--cyan);">🔹 <span id="t-count">0</span></div>
+</header>
+
+<div class="grid">
+  <div class="panel">
+    <h2 style="color:var(--cyan)">🎥 Full Movies</h2>
+    <div id="m-cards" class="cards">Loading...</div>
   </div>
-
-  <!-- Auth Modal -->
-  <div id="auth-modal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal('auth-modal')">&times;</span>
-      <h2 style="color:var(--cyan);">Welcome</h2>
-      <p style="color:#aaa; font-size:0.9rem; margin-bottom:1rem;">Register to download movies & earn tokens.</p>
-      <input id="a-email" type="email" placeholder="Email Address">
-      <input id="a-pass" type="password" placeholder="Password">
-      <button class="btn btn-watch" style="width:100%; margin-top:1rem;" onclick="register()">Create Account</button>
-      <p style="margin-top:1rem; font-size:0.8rem; color:#888;">Already have an account? <a href="#" style="color:var(--cyan);" onclick="alert('Login logic similar to register')">Login</a></p>
-    </div>
+  <div class="panel">
+    <h2 style="color:var(--purple)">🎞️ Trailers</h2>
+    <div id="t-cards" class="cards">Loading...</div>
   </div>
+</div>
 
-  <!-- Video Modal -->
-  <div id="video-modal" class="modal">
-    <div class="modal-content" style="max-width:800px; padding:0;">
-      <span class="close" onclick="closeModal('video-modal')" style="color:#fff; z-index:10;">&times;</span>
-      <iframe id="yt-frame" src="" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen></iframe>
-    </div>
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal">
+  <div class="modal-content">
+    <h2 style="color:var(--cyan)">Register</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="pass" placeholder="Password">
+    <button class="btn btn-watch" onclick="register()">Sign Up</button>
+    <button onclick="closeModal('auth-modal')" style="margin-top:10px; background:none; border:none; color:#888; cursor:pointer;">Close</button>
   </div>
+</div>
 
-  <div id="toast" class="toast"></div>
+<!-- Video Modal -->
+<div id="video-modal" class="modal">
+  <div class="modal-content" style="max-width:800px; padding:0; background:#000;">
+    <iframe id="yt-frame" src="" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen></iframe>
+    <button onclick="closeModal('video-modal')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:#fff; border:none; padding:5px 10px; cursor:pointer;">X</button>
+  </div>
+</div>
 
-  <script>
-    const API = window.location.origin + "/api";
-    let token = localStorage.getItem("cinema_token");
-    let tokens = 0;
+<div id="toast"></div>
 
-    function toast(msg) { const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2500); }
-    function openModal(id) { document.getElementById(id).classList.add("active"); }
-    function closeModal(id) { document.getElementById(id).classList.remove("active"); if(id==="video-modal") document.getElementById("yt-frame").src=""; }
-    
-    function updateUI() {
-      if(token) {
-        document.getElementById("auth-btn").style.display = "none";
-        document.getElementById("token-widget").style.display = "flex";
-        document.getElementById("t-count").textContent = tokens;
-      } else {
-        document.getElementById("auth-btn").style.display = "block";
-        document.getElementById("token-widget").style.display = "none";
-      }
-    }
+<script>
+  const API = window.location.origin + "/api";
+  let token = localStorage.getItem("cinema_token");
+  let tokens = 0;
 
-    async function register() {
-      const e = document.getElementById("a-email").value.trim();
-      const p = document.getElementById("a-pass").value;
-      if(!e.includes("@")) return toast("Invalid email");
-      if(p.length < 4) return toast("Password too short");
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 3000);
+  }
+
+  function openModal(id) { document.getElementById(id).classList.add("active"); }
+  function closeModal(id) { 
+    document.getElementById(id).classList.remove("active"); 
+    if(id === 'video-modal') document.getElementById("yt-frame").src = "";
+  }
+
+  async function register() {
+    const e = document.getElementById("email").value;
+    const p = document.getElementById("pass").value;
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: e, password: p })
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.detail);
       
-      try {
-        const r = await fetch(`${API}/auth/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: e, password: p })
-        });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || "Failed");
-        
-        localStorage.setItem("cinema_token", d.token);
-        token = d.token; tokens = d.tokens;
-        updateUI(); closeModal("auth-modal");
-        toast("🎉 Registered! 5 Tokens Added.");
-      } catch (err) { toast("❌ " + err.message); }
-    }
-
-    async function loadContent() {
-      try {
-        const m = await fetch(`${API}/movies/full`).then(r=>r.json());
-        document.getElementById("m-cards").innerHTML = m.map(i => `
-          <div class="card">
-            <img src="${i.thumbnail}">
-            <div class="card-body">
-              <div style="font-weight:600; font-size:0.9rem;">${i.title}</div>
-              <div class="btn-group">
-                <button class="btn btn-watch" onclick="play('${i.youtube_id}')">▶ Watch</button>
-                ${i.direct_download && i.direct_download !== 'stream_only' ? `<button class="btn btn-dl" onclick="download(${i.id})">💾 DL</button>` : ''}
-              </div>
-            </div>
-          </div>
-        `).join('');
-      } catch(e) { console.error(e); }
-    }
-
-    function play(id) {
-      document.getElementById("yt-frame").src = `https://www.youtube.com/embed/${id}?autoplay=1`;
-      openModal('video-modal');
-    }
-
-    async function download(id) {
-      if(!token) {
-        toast("🔒 Please register to download");
-        return openModal('auth-modal');
-      }
-      try {
-        const r = await fetch(`${API}/movies/download/${id}`, {
-          method: "POST",
-          headers: { "Authorization": token }
-        });
-        const d = await r.json();
-        if(!r.ok) throw new Error(d.detail);
-        
-        window.open(d.url, "_blank");
-        tokens--; updateUI();
-        toast("✅ Download started! -1 Token");
-      } catch(e) { toast("❌ " + e.message); }
-    }
-
-    window.onload = () => {
-      if(token) {
-        fetch(`${API}/user/status`, {headers:{Authorization:token}})
-          .then(r=>r.json()).then(d=>{ tokens=d.tokens; updateUI(); }).catch(()=>localStorage.removeItem("cinema_token"));
-      }
-      loadContent();
+      localStorage.setItem("cinema_token", data.token);
+      token = data.token;
+      tokens = data.tokens;
       updateUI();
-    };
-  </script>
+      closeModal("auth-modal");
+      toast("✅ Registered! 5 Tokens Added.");
+    } catch(err) { toast("❌ " + err.message); }
+  }
+
+  async function loadMovies() {
+    console.log("Fetching movies from:", `${API}/movies/full`);
+    try {
+      const res = await fetch(`${API}/movies/full`);
+      const data = await res.json();
+      console.log("Movies received:", data);
+      
+      const container = document.getElementById("m-cards");
+      if(data.length === 0) { container.innerHTML = "No movies found."; return; }
+      
+      container.innerHTML = data.map(m => `
+        <div class="card">
+          <img src="${m.thumbnail}" onerror="this.src='https://via.placeholder.com/150x100?text=No+Img'">
+          <div class="card-body">
+            <div style="font-size:0.9rem; margin-bottom:5px;">${m.title}</div>
+            <button class="btn btn-watch" onclick="play('${m.youtube_id}')">▶ Watch</button>
+            ${m.direct_download && m.direct_download !== 'stream_only' ? `<button class="btn btn-dl" onclick="download(${m.id})">💾 Download</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+    } catch(err) {
+      console.error(err);
+      document.getElementById("m-cards").innerHTML = "Error loading movies.";
+    }
+  }
+
+  async function loadTrailers() {
+    try {
+      const res = await fetch(`${API}/movies/trailers`);
+      const data = await res.json();
+      const container = document.getElementById("t-cards");
+      container.innerHTML = data.map(m => `
+        <div class="card">
+          <img src="${m.thumbnail}" onerror="this.src='https://via.placeholder.com/150x100?text=No+Img'">
+          <div class="card-body">
+            <div style="font-size:0.9rem; margin-bottom:5px;">${m.title}</div>
+            <button class="btn btn-watch" onclick="play('${m.youtube_id}')">▶ Watch</button>
+          </div>
+        </div>
+      `).join('');
+    } catch(err) { console.error(err); }
+  }
+
+  function play(id) {
+    if(!id) return toast("No video ID");
+    document.getElementById("yt-frame").src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+    openModal("video-modal");
+  }
+
+  async function download(id) {
+    if(!token) {
+      toast("🔒 Please Login to Download");
+      return openModal("auth-modal");
+    }
+    try {
+      const res = await fetch(`${API}/movies/download/${id}`, {
+        method: "POST",
+        headers: { "Authorization": token }
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.detail);
+      
+      window.open(data.url, "_blank");
+      toast("✅ Download Started!");
+    } catch(err) { toast("❌ " + err.message); }
+  }
+
+  function updateUI() {
+    if(token) {
+      document.getElementById("auth-btn").style.display = "none";
+      document.getElementById("user-info").style.display = "block";
+      // Fetch token count
+      fetch(`${API}/user/status`, {headers:{Authorization:token}})
+        .then(r=>r.json()).then(d=>{ document.getElementById("t-count").textContent = d.tokens; });
+    }
+  }
+
+  window.onload = () => {
+    loadMovies();
+    loadTrailers();
+    if(token) updateUI();
+  };
+</script>
 </body>
 </html>
