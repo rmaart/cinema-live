@@ -22,8 +22,9 @@
     .btn-dl { background:var(--purple); color:#fff; }
     .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; }
     .modal.active { display:flex; }
-    .modal-content { background:#111; padding:20px; border-radius:10px; width:90%; max-width:400px; text-align:center; border:1px solid var(--cyan); }
+    .modal-content { background:#111; padding:20px; border-radius:10px; width:90%; max-width:800px; text-align:center; border:1px solid var(--cyan); position:relative; }
     input { width:100%; padding:10px; margin:10px 0; background:#222; border:1px solid #444; color:#fff; border-radius:5px; }
+    iframe { width:100%; aspect-ratio:16/9; border:none; background:#000; }
     #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:5px; opacity:0; transition:0.3s; pointer-events:none; }
     #toast.show { opacity:1; bottom:40px; }
   </style>
@@ -49,7 +50,7 @@
 
 <!-- Auth Modal -->
 <div id="auth-modal" class="modal">
-  <div class="modal-content">
+  <div class="modal-content" style="max-width:400px;">
     <h2 style="color:var(--cyan)">Register</h2>
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="pass" placeholder="Password">
@@ -60,9 +61,9 @@
 
 <!-- Video Modal -->
 <div id="video-modal" class="modal">
-  <div class="modal-content" style="max-width:800px; padding:0; background:#000;">
-    <iframe id="yt-frame" src="" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen></iframe>
-    <button onclick="closeModal('video-modal')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:#fff; border:none; padding:5px 10px; cursor:pointer;">X</button>
+  <div class="modal-content">
+    <button onclick="closeModal('video-modal')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:#fff; border:none; padding:5px 10px; cursor:pointer; z-index:10;">X</button>
+    <div id="player-container"></div>
   </div>
 </div>
 
@@ -82,7 +83,8 @@
   function openModal(id) { document.getElementById(id).classList.add("active"); }
   function closeModal(id) { 
     document.getElementById(id).classList.remove("active"); 
-    if(id === 'video-modal') document.getElementById("yt-frame").src = "";
+    // Clear player content to stop video
+    document.getElementById("player-container").innerHTML = "";
   }
 
   async function register() {
@@ -107,12 +109,9 @@
   }
 
   async function loadMovies() {
-    console.log("Fetching movies from:", `${API}/movies/full`);
     try {
       const res = await fetch(`${API}/movies/full`);
       const data = await res.json();
-      console.log("Movies received:", data);
-      
       const container = document.getElementById("m-cards");
       if(data.length === 0) { container.innerHTML = "No movies found."; return; }
       
@@ -121,7 +120,7 @@
           <img src="${m.thumbnail}" onerror="this.src='https://via.placeholder.com/150x100?text=No+Img'">
           <div class="card-body">
             <div style="font-size:0.9rem; margin-bottom:5px;">${m.title}</div>
-            <button class="btn btn-watch" onclick="play('${m.youtube_id}')">▶ Watch</button>
+            <button class="btn btn-watch" onclick='play(${JSON.stringify(m)})'>▶ Watch</button>
             ${m.direct_download && m.direct_download !== 'stream_only' ? `<button class="btn btn-dl" onclick="download(${m.id})">💾 Download</button>` : ''}
           </div>
         </div>
@@ -142,16 +141,44 @@
           <img src="${m.thumbnail}" onerror="this.src='https://via.placeholder.com/150x100?text=No+Img'">
           <div class="card-body">
             <div style="font-size:0.9rem; margin-bottom:5px;">${m.title}</div>
-            <button class="btn btn-watch" onclick="play('${m.youtube_id}')">▶ Watch</button>
+            <button class="btn btn-watch" onclick='play(${JSON.stringify(m)})'>▶ Watch</button>
           </div>
         </div>
       `).join('');
     } catch(err) { console.error(err); }
   }
 
-  function play(id) {
-    if(!id) return toast("No video ID");
-    document.getElementById("yt-frame").src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+  // Smart Play Function: Handles YouTube & Archive.org
+  function play(movie) {
+    const container = document.getElementById("player-container");
+    
+    if (movie.youtube_id && movie.youtube_id.trim() !== "") {
+      // YouTube Embed
+      container.innerHTML = `<iframe src="https://www.youtube.com/embed/${movie.youtube_id}?autoplay=1&rel=0" allowfullscreen></iframe>`;
+    } else if (movie.url) {
+      // Direct Link / Archive.org Embed
+      // For Archive.org, we can often embed directly if it's an HTML page, 
+      // but for MP4s, we use a video tag or link out.
+      if (movie.url.includes("archive.org")) {
+         // Try to embed archive.org player if possible, otherwise link out
+         // Most archive.org pages have an embed code. For simplicity, we'll use a video tag if it ends in mp4, else link.
+         if (movie.direct_download && movie.direct_download.endsWith('.mp4')) {
+             container.innerHTML = `<video controls autoplay style="width:100%"><source src="${movie.direct_download}" type="video/mp4"></video>`;
+         } else {
+             // Fallback: Open in new tab for complex archive.org pages
+             toast("Opening external player...");
+             window.open(movie.url, "_blank");
+             return;
+         }
+      } else {
+          // Generic direct link
+          container.innerHTML = `<video controls autoplay style="width:100%"><source src="${movie.url}" type="video/mp4"></video>`;
+      }
+    } else {
+      toast("❌ No video source available");
+      return;
+    }
+    
     openModal("video-modal");
   }
 
@@ -177,7 +204,6 @@
     if(token) {
       document.getElementById("auth-btn").style.display = "none";
       document.getElementById("user-info").style.display = "block";
-      // Fetch token count
       fetch(`${API}/user/status`, {headers:{Authorization:token}})
         .then(r=>r.json()).then(d=>{ document.getElementById("t-count").textContent = d.tokens; });
     }
