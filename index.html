@@ -38,4 +38,342 @@
     /* Modals */
     .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; overflow-y:auto; backdrop-filter:blur(5px); }
     .modal.active { display:flex; }
-    .modal-content { background:#111; padding:20px; border-radius:10px; width:90%; max-width:500px; border:1px solid var(--cyan); position:relative; box-shadow:0 0 2
+    .modal-content { background:#111; padding:20px; border-radius:10px; width:90%; max-width:500px; border:1px solid var(--cyan); position:relative; box-shadow:0 0 20px rgba(0,243,255,0.1); }
+    .modal-lg { max-width:1000px; }
+    
+    /* Forms */
+    input, select { width:100%; padding:10px; margin:8px 0; background:#222; border:1px solid #444; color:#fff; border-radius:5px; outline:none; }
+    input:focus { border-color:var(--cyan); }
+    
+    /* Video Player */
+    iframe, video { width:100%; aspect-ratio:16/9; border:none; background:#000; border-radius:5px; }
+    
+    /* Admin Table */
+    table { width:100%; border-collapse:collapse; margin-top:10px; font-size:0.8rem; }
+    th, td { padding:8px; text-align:left; border-bottom:1px solid #333; }
+    th { color:var(--cyan); font-weight:600; }
+    
+    /* Agent Logs */
+    .log-container { background:#000; padding:10px; border-radius:5px; height:200px; overflow-y:auto; font-family:'Courier New', monospace; font-size:0.75rem; color:#0f0; border:1px solid #333; }
+    .log-entry { margin-bottom:4px; border-bottom:1px dashed #333; padding-bottom:2px; }
+    .log-time { color:#888; margin-right:5px; }
+
+    /* Toast & Utils */
+    #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:5px; opacity:0; transition:0.3s; pointer-events:none; z-index:200; border:1px solid var(--cyan); }
+    #toast.show { opacity:1; bottom:40px; }
+    .close-btn { position:absolute; top:10px; right:15px; font-size:1.5rem; cursor:pointer; color:#888; }
+    .close-btn:hover { color:#fff; }
+    
+    /* User Info */
+    #user-info { display:none; align-items:center; gap:5px; color:var(--cyan); font-weight:bold; }
+    #auth-btn { background:transparent; border:1px solid var(--cyan); color:var(--cyan); padding:5px 15px; border-radius:20px; cursor:pointer; font-size:0.9rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo" onclick="location.reload()">CINEMA-LIVE</div>
+  <div style="display:flex; gap:15px; align-items:center;">
+    <div id="user-info">🔹 <span id="t-count">0</span></div>
+    <button id="auth-btn" onclick="openModal('auth-modal')">Login / Register</button>
+  </div>
+</header>
+
+<div class="grid">
+  <!-- Full Movies -->
+  <div class="panel">
+    <h2 style="color:var(--cyan)">🎥 Full Movies</h2>
+    <div id="m-cards" class="cards"><div style="padding:20px; color:#666;">Loading...</div></div>
+  </div>
+  
+  <!-- Trailers -->
+  <div class="panel">
+    <h2 style="color:var(--purple)">🎞️ Trailers</h2>
+    <div id="t-cards" class="cards"><div style="padding:20px; color:#666;">Loading...</div></div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal('auth-modal')">&times;</span>
+    <h2 style="color:var(--cyan); margin-bottom:10px;">Welcome to Cinema-Live</h2>
+    <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Register to download movies and earn tokens.</p>
+    <input type="email" id="email" placeholder="Email Address">
+    <input type="password" id="pass" placeholder="Password (min 4 chars)">
+    <button class="btn btn-watch" onclick="register()">Create Account</button>
+    <p style="margin-top:10px; font-size:0.8rem; color:#666; text-align:center;">Already have an account? Just register again to login.</p>
+  </div>
+</div>
+
+<!-- Video Modal -->
+<div id="video-modal" class="modal">
+  <div class="modal-content modal-lg" style="background:#000; border:none; padding:0;">
+    <span class="close-btn" onclick="closeModal('video-modal')" style="color:#fff; z-index:10; background:rgba(0,0,0,0.5); width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%;">&times;</span>
+    <div id="player-container"></div>
+  </div>
+</div>
+
+<!-- Admin Modal (Ctrl+Shift+A) -->
+<div id="admin-modal" class="modal">
+  <div class="modal-content modal-lg">
+    <span class="close-btn" onclick="closeModal('admin-modal')">&times;</span>
+    <h2 style="color:var(--cyan); margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">🕵️ Admin Dashboard</h2>
+    
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px;">
+      
+      <!-- 1. Add Movie -->
+      <div style="background:#1a1a1a; padding:15px; border-radius:8px;">
+        <h3 style="margin-bottom:10px; color:#fff;">➕ Add Content</h3>
+        <input id="new-title" placeholder="Movie Title">
+        <input id="new-year" type="number" placeholder="Year (e.g. 2024)">
+        <select id="new-type">
+          <option value="full_movie">Full Movie</option>
+          <option value="trailer">Trailer</option>
+        </select>
+        <input id="new-yt" placeholder="YouTube ID (optional)">
+        <input id="new-thumb" placeholder="Thumbnail URL">
+        <input id="new-dl" placeholder="Direct MP4 Link (for DL)">
+        <button class="btn btn-watch" onclick="addMovie()">Add to Library</button>
+      </div>
+
+      <!-- 2. Agent Control -->
+      <div style="background:#1a1a1a; padding:15px; border-radius:8px;">
+        <h3 style="margin-bottom:10px; color:var(--purple);">🤖 CinemaBot Agent</h3>
+        <p style="font-size:0.75rem; color:#aaa; margin-bottom:10px;">Auto-hunts CC movies & ad leads daily at 8 AM.</p>
+        <button class="btn" style="background:var(--purple); color:#fff; margin-bottom:10px;" onclick="triggerAgent()">🚀 Run Agent Now</button>
+        <div class="log-container" id="agent-logs">
+          <div style="color:#666; text-align:center; padding-top:80px;">Loading logs...</div>
+        </div>
+      </div>
+
+      <!-- 3. Manage Library -->
+      <div style="background:#1a1a1a; padding:15px; border-radius:8px; max-height:400px; overflow-y:auto;">
+        <h3 style="margin-bottom:10px; color:#fff;">📚 Library Manager</h3>
+        <table id="admin-table">
+          <thead><tr><th>Title</th><th>Type</th><th>Action</th></tr></thead>
+          <tbody><tr><td colspan="3" style="text-align:center; color:#666;">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const API = window.location.origin + "/api";
+  const ADMIN_SECRET = "cinema-admin-2025"; // Must match server.py
+  let token = localStorage.getItem("cinema_token");
+  let tokens = 0;
+
+  // --- UI Helpers ---
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; 
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 3000);
+  }
+
+  function openModal(id) { 
+    document.getElementById(id).classList.add("active"); 
+    if(id === 'admin-modal') { loadAdminMovies(); loadLogs(); }
+  }
+  
+  function closeModal(id) { 
+    document.getElementById(id).classList.remove("active"); 
+    if(id === 'video-modal') document.getElementById("player-container").innerHTML = "";
+  }
+
+  function updateUI() {
+    if(token) {
+      document.getElementById("auth-btn").style.display = "none";
+      document.getElementById("user-info").style.display = "flex";
+      fetch(`${API}/user/status`, {headers:{Authorization:token}})
+        .then(r=>r.json()).then(d=>{ document.getElementById("t-count").textContent = d.tokens; })
+        .catch(()=>{ localStorage.removeItem("cinema_token"); location.reload(); });
+    } else {
+      document.getElementById("auth-btn").style.display = "block";
+      document.getElementById("user-info").style.display = "none";
+    }
+  }
+
+  // --- User Actions ---
+  async function register() {
+    const e = document.getElementById("email").value.trim();
+    const p = document.getElementById("pass").value;
+    if(!e.includes("@") || p.length < 4) return toast("❌ Invalid email or password");
+    
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: e, password: p })
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.detail);
+      
+      localStorage.setItem("cinema_token", data.token);
+      token = data.token; tokens = data.tokens;
+      updateUI(); closeModal("auth-modal");
+      toast("✅ Registered! 5 Tokens Added.");
+    } catch(err) { toast("❌ " + err.message); }
+  }
+
+  async function loadMovies() {
+    try {
+      const res = await fetch(`${API}/movies/full`);
+      const data = await res.json();
+      const container = document.getElementById("m-cards");
+      if(!data.length) { container.innerHTML = "<div style='color:#666'>No movies yet.</div>"; return; }
+      container.innerHTML = data.map(m => createCard(m)).join('');
+    } catch(err) { container.innerHTML = "<div style='color:red'>Error loading.</div>"; }
+  }
+
+  async function loadTrailers() {
+    try {
+      const res = await fetch(`${API}/movies/trailers`);
+      const data = await res.json();
+      const container = document.getElementById("t-cards");
+      container.innerHTML = data.map(m => createCard(m)).join('');
+    } catch(err) { console.error(err); }
+  }
+
+  function createCard(m) {
+    return `
+      <div class="card">
+        <img src="${m.thumbnail}" onerror="this.src='https://via.placeholder.com/150x90?text=No+Img'">
+        <div class="card-body">
+          <div class="card-title">${m.title}</div>
+          <button class="btn btn-watch" onclick='play(${JSON.stringify(m)})'>▶ Watch</button>
+          ${m.direct_download && m.direct_download !== 'stream_only' ? `<button class="btn btn-dl" onclick="download(${m.id})">💾 DL</button>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function play(movie) {
+    const container = document.getElementById("player-container");
+    if (movie.youtube_id && movie.youtube_id.trim() !== "") {
+      container.innerHTML = `<iframe src="https://www.youtube.com/embed/${movie.youtube_id}?autoplay=1&rel=0" allowfullscreen></iframe>`;
+    } else if (movie.direct_download && movie.direct_download.endsWith('.mp4')) {
+      container.innerHTML = `<video controls autoplay><source src="${movie.direct_download}" type="video/mp4"></video>`;
+    } else if (movie.url) {
+      toast("Opening external link...");
+      window.open(movie.url, "_blank");
+      return;
+    } else {
+      toast("❌ No video source available");
+      return;
+    }
+    openModal("video-modal");
+  }
+
+  async function download(id) {
+    if(!token) { toast("🔒 Please Login to Download"); return openModal("auth-modal"); }
+    try {
+      const res = await fetch(`${API}/movies/download/${id}`, { method: "POST", headers: { "Authorization": token } });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.detail);
+      window.open(data.url, "_blank");
+      toast("✅ Download Started! -1 Token");
+      // Update local token count visually
+      tokens--; document.getElementById("t-count").textContent = tokens;
+    } catch(err) { toast("❌ " + err.message); }
+  }
+
+  // --- Admin Functions ---
+  document.addEventListener("keydown", e => {
+    if(e.ctrlKey && e.shiftKey && e.key === "A") {
+      e.preventDefault();
+      openModal("admin-modal");
+    }
+  });
+
+  async function loadAdminMovies() {
+    try {
+      const res = await fetch(`${API}/admin/movies`, { headers: { "X-Secret": ADMIN_SECRET } });
+      const data = await res.json();
+      const tbody = document.querySelector("#admin-table tbody");
+      if(!data.length) { tbody.innerHTML = "<tr><td colspan='3' style='text-align:center'>Empty</td></tr>"; return; }
+      tbody.innerHTML = data.map(m => `
+        <tr>
+          <td>${m.title}</td>
+          <td><span style="color:${m.content_type==='full_movie'?'var(--cyan)':'var(--purple)'}">${m.content_type}</span></td>
+          <td><button class="btn btn-del" onclick="deleteMovie(${m.id})">Del</button></td>
+        </tr>
+      `).join('');
+    } catch(err) { console.error(err); }
+  }
+
+  async function addMovie() {
+    const payload = {
+      title: document.getElementById("new-title").value,
+      year: parseInt(document.getElementById("new-year").value) || 2024,
+      category: "General",
+      content_type: document.getElementById("new-type").value,
+      license_type: "Custom",
+      youtube_id: document.getElementById("new-yt").value,
+      url: "",
+      thumbnail: document.getElementById("new-thumb").value,
+      duration: "PT0M",
+      direct_download: document.getElementById("new-dl").value
+    };
+    
+    if(!payload.title) return toast("Title required");
+
+    try {
+      const res = await fetch(`${API}/admin/movies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Secret": ADMIN_SECRET },
+        body: JSON.stringify(payload)
+      });
+      if(res.ok) {
+        toast("✅ Movie Added");
+        loadAdminMovies();
+        loadMovies(); loadTrailers();
+        document.querySelectorAll("#admin-modal input").forEach(i => i.value = "");
+      } else { toast("❌ Failed"); }
+    } catch(err) { toast("❌ Error"); }
+  }
+
+  async function deleteMovie(id) {
+    if(!confirm("Delete this item?")) return;
+    try {
+      const res = await fetch(`${API}/admin/movies/${id}`, { method: "DELETE", headers: { "X-Secret": ADMIN_SECRET } });
+      if(res.ok) { toast("✅ Deleted"); loadAdminMovies(); loadMovies(); loadTrailers(); }
+    } catch(err) { toast("❌ Error"); }
+  }
+
+  async function triggerAgent() {
+    toast("🤖 Agent started...");
+    document.getElementById("agent-logs").innerHTML = "<div style='color:#aaa'>Running...</div>";
+    try {
+      await fetch(`${API}/admin/trigger-agent`, { method: "POST", headers: { "X-Secret": ADMIN_SECRET } });
+      setTimeout(loadLogs, 1500);
+    } catch(err) { toast("❌ Failed to trigger"); }
+  }
+
+  async function loadLogs() {
+    try {
+      const res = await fetch(`${API}/admin/logs`, { headers: { "X-Secret": ADMIN_SECRET } });
+      const logs = await res.json();
+      const container = document.getElementById("agent-logs");
+      if(!logs.length) { container.innerHTML = "<div style='color:#666; text-align:center; padding-top:80px;'>No logs yet.</div>"; return; }
+      container.innerHTML = logs.map(l => `
+        <div class="log-entry">
+          <span class="log-time">[${l.timestamp.split('T')[1].split('.')[0]}]</span> 
+          <strong style="color:${l.status==='error'?'red':'#fff'}">${l.task.toUpperCase()}</strong>: ${l.details}
+        </div>
+      `).join('');
+    } catch(err) { console.error(err); }
+  }
+
+  // Init
+  window.onload = () => {
+    loadMovies();
+    loadTrailers();
+    if(token) updateUI();
+  };
+</script>
+</body>
+</html>
