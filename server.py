@@ -10,7 +10,13 @@ load_dotenv()
 app = FastAPI(title="Cinema-Live API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-DB_PATH = "cinemalive.db" # Simple local file for now to ensure it works
+# Render uses /data for persistent storage. Local uses current dir.
+DB_DIR = "/data" if os.path.exists("/data") else "."
+DB_PATH = os.path.join(DB_DIR, "cinemalive.db")
+
+# Ensure directory exists
+os.makedirs(DB_DIR, exist_ok=True)
+
 SECRET_KEY = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
 ALGORITHM = "HS256"
 
@@ -18,12 +24,19 @@ class RegisterReq(BaseModel):
     email: str
     password: str
 
+def get_db():
+    """Helper to get a fresh DB connection"""
+    return sqlite3.connect(DB_PATH)
+
 def init_db():
-    conn = sqlite3.connect(DB_PATH); c = conn.cursor()
+    conn = get_db()
+    c = conn.cursor()
+    
+    # Create Tables
     c.execute('''CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password_hash TEXT, tokens INTEGER DEFAULT 5, created_at TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, year INTEGER, category TEXT, content_type TEXT, license_type TEXT, status TEXT, youtube_id TEXT, url TEXT, thumbnail TEXT, duration TEXT, direct_download TEXT, added_date TEXT)''')
     
-    # FORCE SEED DATA IF EMPTY
+    # Seed Data if Empty
     count = c.execute("SELECT COUNT(*) FROM movies").fetchone()[0]
     if count == 0:
         now = datetime.now().isoformat()
@@ -34,7 +47,9 @@ def init_db():
         ]
         c.executemany('INSERT INTO movies (title,year,category,content_type,license_type,status,youtube_id,url,thumbnail,duration,direct_download,added_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', movies)
     
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
+    print(f"✅ Database initialized at: {DB_PATH}")
 
 def verify_token(auth_header: str = Header(None)):
     if not auth_header or not auth_header.startswith("Bearer "): raise HTTPException(401, "Missing token")
@@ -44,12 +59,16 @@ def verify_token(auth_header: str = Header(None)):
 def hash_pwd(p): return hashlib.sha256(p.encode()).hexdigest()
 
 @app.on_event("startup")
-def startup(): init_db()
+def startup(): 
+    try:
+        init_db()
+    except Exception as e:
+        print(f"❌ DB Init Error: {e}")
 
 @app.post("/api/auth/register")
 def register(req: RegisterReq):
     if len(req.password) < 4: raise HTTPException(400, "Password too short")
-    conn = sqlite3.connect(DB_PATH); c = conn.cursor()
+    conn = get_db(); c = conn.cursor()
     try:
         c.execute("INSERT INTO users (email,password_hash,tokens,created_at) VALUES (?,?,?,?)", 
                   (req.email, hash_pwd(req.password), 5, datetime.now().isoformat()))
@@ -61,27 +80,34 @@ def register(req: RegisterReq):
 
 @app.get("/api/movies/full")
 def get_full(): 
-    conn = sqlite3.connect(DB_PATH)
-    res = [dict(r) for r in conn.execute("SELECT * FROM movies WHERE content_type='full_movie'").fetchall()]
-    conn.close()
-    return res
+    conn = get_db()
+    try:
+        res = [dict(r) for r in conn.execute("SELECT * FROM movies WHERE content_type='full_movie'").fetchall()]
+        return res
+    except Exception as e:
+        print(f"Error fetching full movies: {e}")
+        raise HTTPException(500, "DB Error")
+    finally: conn.close()
 
 @app.get("/api/movies/trailers")
 def get_trailers(): 
-    conn = sqlite3.connect(DB_PATH)
-    res = [dict(r) for r in conn.execute("SELECT * FROM movies WHERE content_type='trailer'").fetchall()]
-    conn.close()
-    return res
+    conn = get_db()
+    try:
+        res = [dict(r) for r in conn.execute("SELECT * FROM movies WHERE content_type='trailer'").fetchall()]
+        return res
+    except Exception as e:
+        print(f"Error fetching trailers: {e}")
+        raise HTTPException(500, "DB Error")
+    finally: conn.close()
 
 @app.post("/api/movies/download/{mid}")
 def dl(mid:int, uid:int=Depends(verify_token)):
-    conn=sqlite3.connect(DB_PATH)
+    conn=get_db()
     m=conn.execute("SELECT direct_download FROM movies WHERE id=?",(mid,)).fetchone()
     u=conn.execute("SELECT tokens FROM users WHERE id=?",(uid,)).fetchone()
     conn.close()
     if not m or m[0]=="stream_only": raise HTTPException(403,"Streaming only")
     if u[0] < 1: raise HTTPException(402,"Need 1 Token")
-    # In a real app, deduct token here. For demo, just return URL.
     return {"url": m[0]}
 
 @app.get("/")
