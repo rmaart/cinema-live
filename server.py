@@ -13,8 +13,6 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # Render uses /data for persistent storage. Local uses current dir.
 DB_DIR = "/data" if os.path.exists("/data") else "."
 DB_PATH = os.path.join(DB_DIR, "cinemalive.db")
-
-# Ensure directory exists
 os.makedirs(DB_DIR, exist_ok=True)
 
 SECRET_KEY = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
@@ -25,8 +23,15 @@ class RegisterReq(BaseModel):
     password: str
 
 def get_db():
-    """Helper to get a fresh DB connection"""
-    return sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row # This makes rows accessible by column name
+    return conn
+
+def dict_from_row(row):
+    """Safely convert a sqlite3.Row to a dictionary"""
+    if row is None:
+        return None
+    return {key: row[key] for key in row.keys()}
 
 def init_db():
     conn = get_db()
@@ -82,7 +87,9 @@ def register(req: RegisterReq):
 def get_full(): 
     conn = get_db()
     try:
-        res = [dict(r) for r in conn.execute("SELECT * FROM movies WHERE content_type='full_movie'").fetchall()]
+        cursor = conn.execute("SELECT * FROM movies WHERE content_type='full_movie'")
+        rows = cursor.fetchall()
+        res = [dict_from_row(row) for row in rows]
         return res
     except Exception as e:
         print(f"Error fetching full movies: {e}")
@@ -93,7 +100,9 @@ def get_full():
 def get_trailers(): 
     conn = get_db()
     try:
-        res = [dict(r) for r in conn.execute("SELECT * FROM movies WHERE content_type='trailer'").fetchall()]
+        cursor = conn.execute("SELECT * FROM movies WHERE content_type='trailer'")
+        rows = cursor.fetchall()
+        res = [dict_from_row(row) for row in rows]
         return res
     except Exception as e:
         print(f"Error fetching trailers: {e}")
