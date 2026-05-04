@@ -375,5 +375,32 @@
     if(token) updateUI();
   };
 </script>
+  // --- Agent Functions ---
+async function triggerAgent() {
+  toast("🤖 Agent started...");
+  try {
+    await fetch(`${API}/admin/trigger-agent`, { method: "POST", headers: { "X-Secret": ADMIN_SECRET } });
+    setTimeout(loadLogs, 1000); // Wait 1s then refresh logs
+  } catch(err) { toast("❌ Failed to trigger"); }
+}
+
+async function loadLogs() {
+  try {
+    const res = await fetch(`${API}/admin/logs`, { headers: { "X-Secret": ADMIN_SECRET } });
+    const logs = await res.json();
+    const container = document.getElementById("agent-logs");
+    container.innerHTML = logs.map(l => `
+      <div style="border-bottom:1px solid #333; padding:2px;">
+        <span style="color:#888">[${l.timestamp.split('T')[1].split('.')[0]}]</span> 
+        <strong>${l.task}</strong>: ${l.details}
+      </div>
+    `).join('');
+  } catch(err) { console.error(err); }
+}
+
+// Update loadAdminMovies to also load logs
+const originalLoadAdmin = loadAdminMovies; // Keep reference if needed, or just call both
+// In your existing openModal logic for admin, add:
+// if(id === 'admin-modal') { loadAdminMovies(); loadLogs(); }
 </body>
 </html>
