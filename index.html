@@ -6,154 +6,89 @@
   <title>Cinema-Live</title>
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    :root { --cyan: #00f3ff; --purple: #7b2cbf; --dark: #0a0e17; --glass: rgba(255,255,255,0.05); }
+    :root { --cyan: #00f3ff; --purple: #7b2cbf; --dark: #0a0e17; }
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Exo 2',sans-serif; background:var(--dark); color:#fff; overflow-x:hidden; }
-    
-    /* Header */
-    header { padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; background:#111; position:sticky; top:0; z-index:50; }
-    .logo { font-family:'Orbitron'; font-size:1.5rem; color:var(--cyan); font-weight:bold; cursor:pointer; text-transform:uppercase; letter-spacing:2px; }
-    
-    /* Layout */
+    header { padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; background:#111; }
+    .logo { font-family:'Orbitron'; font-size:1.5rem; color:var(--cyan); font-weight:bold; cursor:pointer; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:20px; max-width:1200px; margin:0 auto; }
     @media(max-width:768px) { .grid { grid-template-columns:1fr; } }
-    
-    /* Panels & Cards */
     .panel { background:#111; padding:15px; border-radius:10px; border:1px solid #333; min-height:300px; }
-    .panel h2 { margin-bottom:15px; font-size:1.2rem; display:flex; align-items:center; gap:10px; }
     .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:15px; }
-    .card { background:#1a1a1a; border-radius:8px; overflow:hidden; border:1px solid #333; transition:transform 0.2s; }
-    .card:hover { transform:translateY(-5px); border-color:var(--cyan); }
+    .card { background:#1a1a1a; border-radius:8px; overflow:hidden; border:1px solid #333; }
     .card img { width:100%; height:90px; object-fit:cover; background:#000; }
     .card-body { padding:10px; }
-    .card-title { font-size:0.85rem; font-weight:600; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    
-    /* Buttons */
-    .btn { width:100%; padding:6px; margin-top:5px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.8rem; transition:0.2s; }
+    .btn { width:100%; padding:8px; margin-top:5px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
     .btn-watch { background:var(--cyan); color:#000; }
     .btn-dl { background:var(--purple); color:#fff; }
-    .btn-del { background:#ef4444; color:#fff; width:auto; padding:2px 8px; font-size:0.7rem; }
-    .btn:hover { opacity:0.9; }
-
-    /* Modals */
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; overflow-y:auto; backdrop-filter:blur(5px); }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; }
     .modal.active { display:flex; }
-    .modal-content { background:#111; padding:20px; border-radius:10px; width:90%; max-width:500px; border:1px solid var(--cyan); position:relative; box-shadow:0 0 20px rgba(0,243,255,0.1); }
+    .modal-content { background:#111; padding:20px; border-radius:10px; width:90%; max-width:500px; border:1px solid var(--cyan); position:relative; }
     .modal-lg { max-width:1000px; }
-    
-    /* Forms */
-    input, select { width:100%; padding:10px; margin:8px 0; background:#222; border:1px solid #444; color:#fff; border-radius:5px; outline:none; }
-    input:focus { border-color:var(--cyan); }
-    
-    /* Video Player */
-    iframe, video { width:100%; aspect-ratio:16/9; border:none; background:#000; border-radius:5px; }
-    
-    /* Admin Table */
+    input, select { width:100%; padding:10px; margin:8px 0; background:#222; border:1px solid #444; color:#fff; border-radius:5px; }
+    iframe, video { width:100%; aspect-ratio:16/9; border:none; background:#000; }
     table { width:100%; border-collapse:collapse; margin-top:10px; font-size:0.8rem; }
     th, td { padding:8px; text-align:left; border-bottom:1px solid #333; }
-    th { color:var(--cyan); font-weight:600; }
-    
-    /* Agent Logs */
-    .log-container { background:#000; padding:10px; border-radius:5px; height:200px; overflow-y:auto; font-family:'Courier New', monospace; font-size:0.75rem; color:#0f0; border:1px solid #333; }
-    .log-entry { margin-bottom:4px; border-bottom:1px dashed #333; padding-bottom:2px; }
-    .log-time { color:#888; margin-right:5px; }
-
-    /* Toast & Utils */
-    #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:5px; opacity:0; transition:0.3s; pointer-events:none; z-index:200; border:1px solid var(--cyan); }
+    th { color:var(--cyan); }
+    .log-container { background:#000; padding:10px; border-radius:5px; height:200px; overflow-y:auto; font-family:monospace; font-size:0.75rem; color:#0f0; border:1px solid #333; }
+    #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:5px; opacity:0; transition:0.3s; pointer-events:none; z-index:200; }
     #toast.show { opacity:1; bottom:40px; }
     .close-btn { position:absolute; top:10px; right:15px; font-size:1.5rem; cursor:pointer; color:#888; }
-    .close-btn:hover { color:#fff; }
-    
-    /* User Info */
-    #user-info { display:none; align-items:center; gap:5px; color:var(--cyan); font-weight:bold; }
-    #auth-btn { background:transparent; border:1px solid var(--cyan); color:var(--cyan); padding:5px 15px; border-radius:20px; cursor:pointer; font-size:0.9rem; }
   </style>
 </head>
 <body>
 
 <header>
   <div class="logo" onclick="location.reload()">CINEMA-LIVE</div>
-  <div style="display:flex; gap:15px; align-items:center;">
-    <div id="user-info">🔹 <span id="t-count">0</span></div>
-    <button id="auth-btn" onclick="openModal('auth-modal')">Login / Register</button>
-  </div>
+  <button id="auth-btn" onclick="openModal('auth-modal')" style="background:transparent; border:1px solid var(--cyan); color:var(--cyan); padding:5px 15px; border-radius:20px; cursor:pointer;">Login / Register</button>
+  <div id="user-info" style="display:none; color:var(--cyan); font-weight:bold;">🔹 <span id="t-count">0</span></div>
 </header>
 
 <div class="grid">
-  <!-- Full Movies -->
-  <div class="panel">
-    <h2 style="color:var(--cyan)">🎥 Full Movies</h2>
-    <div id="m-cards" class="cards"><div style="padding:20px; color:#666;">Loading...</div></div>
-  </div>
-  
-  <!-- Trailers -->
-  <div class="panel">
-    <h2 style="color:var(--purple)">🎞️ Trailers</h2>
-    <div id="t-cards" class="cards"><div style="padding:20px; color:#666;">Loading...</div></div>
-  </div>
+  <div class="panel"><h2 style="color:var(--cyan)">🎥 Full Movies</h2><div id="m-cards" class="cards">Loading...</div></div>
+  <div class="panel"><h2 style="color:var(--purple)">🎞️ Trailers</h2><div id="t-cards" class="cards">Loading...</div></div>
 </div>
 
 <!-- Auth Modal -->
 <div id="auth-modal" class="modal">
   <div class="modal-content">
     <span class="close-btn" onclick="closeModal('auth-modal')">&times;</span>
-    <h2 style="color:var(--cyan); margin-bottom:10px;">Welcome to Cinema-Live</h2>
-    <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Register to download movies and earn tokens.</p>
-    <input type="email" id="email" placeholder="Email Address">
-    <input type="password" id="pass" placeholder="Password (min 4 chars)">
-    <button class="btn btn-watch" onclick="register()">Create Account</button>
-    <p style="margin-top:10px; font-size:0.8rem; color:#666; text-align:center;">Already have an account? Just register again to login.</p>
+    <h2 style="color:var(--cyan)">Welcome</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="pass" placeholder="Password">
+    <button class="btn btn-watch" onclick="register()">Sign Up</button>
   </div>
 </div>
 
 <!-- Video Modal -->
 <div id="video-modal" class="modal">
   <div class="modal-content modal-lg" style="background:#000; border:none; padding:0;">
-    <span class="close-btn" onclick="closeModal('video-modal')" style="color:#fff; z-index:10; background:rgba(0,0,0,0.5); width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%;">&times;</span>
+    <span class="close-btn" onclick="closeModal('video-modal')" style="color:#fff; z-index:10;">&times;</span>
     <div id="player-container"></div>
   </div>
 </div>
 
-<!-- Admin Modal (Ctrl+Shift+A) -->
+<!-- Admin Modal -->
 <div id="admin-modal" class="modal">
   <div class="modal-content modal-lg">
     <span class="close-btn" onclick="closeModal('admin-modal')">&times;</span>
-    <h2 style="color:var(--cyan); margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">🕵️ Admin Dashboard</h2>
-    
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px;">
-      
-      <!-- 1. Add Movie -->
+    <h2 style="color:var(--cyan)">🕵️ Admin Dashboard</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-top:20px;">
       <div style="background:#1a1a1a; padding:15px; border-radius:8px;">
-        <h3 style="margin-bottom:10px; color:#fff;">➕ Add Content</h3>
-        <input id="new-title" placeholder="Movie Title">
-        <input id="new-year" type="number" placeholder="Year (e.g. 2024)">
-        <select id="new-type">
-          <option value="full_movie">Full Movie</option>
-          <option value="trailer">Trailer</option>
-        </select>
-        <input id="new-yt" placeholder="YouTube ID (optional)">
-        <input id="new-thumb" placeholder="Thumbnail URL">
-        <input id="new-dl" placeholder="Direct MP4 Link (for DL)">
-        <button class="btn btn-watch" onclick="addMovie()">Add to Library</button>
+        <h3>Add Movie</h3>
+        <input id="new-title" placeholder="Title"><input id="new-year" type="number" placeholder="Year">
+        <select id="new-type"><option value="full_movie">Full Movie</option><option value="trailer">Trailer</option></select>
+        <input id="new-yt" placeholder="YouTube ID"><input id="new-thumb" placeholder="Thumbnail URL"><input id="new-dl" placeholder="MP4 Link">
+        <button class="btn btn-watch" onclick="addMovie()">Add</button>
       </div>
-
-      <!-- 2. Agent Control -->
       <div style="background:#1a1a1a; padding:15px; border-radius:8px;">
-        <h3 style="margin-bottom:10px; color:var(--purple);">🤖 CinemaBot Agent</h3>
-        <p style="font-size:0.75rem; color:#aaa; margin-bottom:10px;">Auto-hunts CC movies & ad leads daily at 8 AM.</p>
-        <button class="btn" style="background:var(--purple); color:#fff; margin-bottom:10px;" onclick="triggerAgent()">🚀 Run Agent Now</button>
-        <div class="log-container" id="agent-logs">
-          <div style="color:#666; text-align:center; padding-top:80px;">Loading logs...</div>
-        </div>
+        <h3>🤖 Agent</h3>
+        <button class="btn" style="background:var(--purple); color:#fff;" onclick="triggerAgent()">Run Agent</button>
+        <div class="log-container" id="agent-logs">Logs...</div>
       </div>
-
-      <!-- 3. Manage Library -->
       <div style="background:#1a1a1a; padding:15px; border-radius:8px; max-height:400px; overflow-y:auto;">
-        <h3 style="margin-bottom:10px; color:#fff;">📚 Library Manager</h3>
-        <table id="admin-table">
-          <thead><tr><th>Title</th><th>Type</th><th>Action</th></tr></thead>
-          <tbody><tr><td colspan="3" style="text-align:center; color:#666;">Loading...</td></tr></tbody>
-        </table>
+        <h3>Library</h3>
+        <table id="admin-table"><thead><tr><th>Title</th><th>Action</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
   </div>
@@ -163,244 +98,73 @@
 
 <script>
   const API = window.location.origin + "/api";
-  const ADMIN_SECRET = "cinema-admin-2025"; // Must match server.py
+  const ADMIN_SECRET = "cinema-admin-2025";
   let token = localStorage.getItem("cinema_token");
-  let tokens = 0;
 
-  // --- UI Helpers ---
-  function toast(msg) {
-    const t = document.getElementById("toast");
-    t.textContent = msg; 
-    t.classList.add("show");
-    setTimeout(() => t.classList.remove("show"), 3000);
-  }
-
-  function openModal(id) { 
-    document.getElementById(id).classList.add("active"); 
-    if(id === 'admin-modal') { loadAdminMovies(); loadLogs(); }
-  }
+  function toast(msg) { const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000); }
+  function openModal(id) { document.getElementById(id).classList.add("active"); if(id==='admin-modal'){loadAdminMovies();loadLogs();} }
+  function closeModal(id) { document.getElementById(id).classList.remove("active"); if(id==='video-modal')document.getElementById("player-container").innerHTML=""; }
   
-  function closeModal(id) { 
-    document.getElementById(id).classList.remove("active"); 
-    if(id === 'video-modal') document.getElementById("player-container").innerHTML = "";
-  }
-
-  function updateUI() {
-    if(token) {
-      document.getElementById("auth-btn").style.display = "none";
-      document.getElementById("user-info").style.display = "flex";
-      fetch(`${API}/user/status`, {headers:{Authorization:token}})
-        .then(r=>r.json()).then(d=>{ document.getElementById("t-count").textContent = d.tokens; })
-        .catch(()=>{ localStorage.removeItem("cinema_token"); location.reload(); });
-    } else {
-      document.getElementById("auth-btn").style.display = "block";
-      document.getElementById("user-info").style.display = "none";
-    }
-  }
-
-  // --- User Actions ---
   async function register() {
-    const e = document.getElementById("email").value.trim();
-    const p = document.getElementById("pass").value;
-    if(!e.includes("@") || p.length < 4) return toast("❌ Invalid email or password");
-    
+    const e=document.getElementById("email").value, p=document.getElementById("pass").value;
     try {
-      const res = await fetch(`${API}/auth/register`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: e, password: p })
-      });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data.detail);
-      
-      localStorage.setItem("cinema_token", data.token);
-      token = data.token; tokens = data.tokens;
-      updateUI(); closeModal("auth-modal");
-      toast("✅ Registered! 5 Tokens Added.");
-    } catch(err) { toast("❌ " + err.message); }
+      const r=await fetch(`${API}/auth/register`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:e,password:p})});
+      const d=await r.json(); if(!r.ok) throw new Error(d.detail);
+      localStorage.setItem("cinema_token",d.token); token=d.token;
+      updateUI(); closeModal("auth-modal"); toast("✅ Registered!");
+    } catch(err){ toast("❌ "+err.message); }
   }
 
   async function loadMovies() {
     try {
-      const res = await fetch(`${API}/movies/full`);
-      const data = await res.json();
-      const container = document.getElementById("m-cards");
-      if(!data.length) { container.innerHTML = "<div style='color:#666'>No movies yet.</div>"; return; }
-      container.innerHTML = data.map(m => createCard(m)).join('');
-    } catch(err) { container.innerHTML = "<div style='color:red'>Error loading.</div>"; }
+      const r=await fetch(`${API}/movies/full`); const d=await r.json();
+      document.getElementById("m-cards").innerHTML=d.map(m=>`<div class="card"><img src="${m.thumbnail}"><div class="card-body"><div>${m.title}</div><button class="btn btn-watch" onclick='play(${JSON.stringify(m)})'>▶ Watch</button>${m.direct_download&&m.direct_download!=='stream_only'?`<button class="btn btn-dl" onclick="download(${m.id})">💾 DL</button>`:''}</div></div>`).join('');
+    } catch(err){ document.getElementById("m-cards").innerHTML="Error"; }
   }
 
   async function loadTrailers() {
     try {
-      const res = await fetch(`${API}/movies/trailers`);
-      const data = await res.json();
-      const container = document.getElementById("t-cards");
-      container.innerHTML = data.map(m => createCard(m)).join('');
-    } catch(err) { console.error(err); }
+      const r=await fetch(`${API}/movies/trailers`); const d=await r.json();
+      document.getElementById("t-cards").innerHTML=d.map(m=>`<div class="card"><img src="${m.thumbnail}"><div class="card-body"><div>${m.title}</div><button class="btn btn-watch" onclick='play(${JSON.stringify(m)})'>▶ Watch</button></div></div>`).join('');
+    } catch(err){ console.error(err); }
   }
 
-  function createCard(m) {
-    return `
-      <div class="card">
-        <img src="${m.thumbnail}" onerror="this.src='https://via.placeholder.com/150x90?text=No+Img'">
-        <div class="card-body">
-          <div class="card-title">${m.title}</div>
-          <button class="btn btn-watch" onclick='play(${JSON.stringify(m)})'>▶ Watch</button>
-          ${m.direct_download && m.direct_download !== 'stream_only' ? `<button class="btn btn-dl" onclick="download(${m.id})">💾 DL</button>` : ''}
-        </div>
-      </div>
-    `;
-  }
-
-  function play(movie) {
-    const container = document.getElementById("player-container");
-    if (movie.youtube_id && movie.youtube_id.trim() !== "") {
-      container.innerHTML = `<iframe src="https://www.youtube.com/embed/${movie.youtube_id}?autoplay=1&rel=0" allowfullscreen></iframe>`;
-    } else if (movie.direct_download && movie.direct_download.endsWith('.mp4')) {
-      container.innerHTML = `<video controls autoplay><source src="${movie.direct_download}" type="video/mp4"></video>`;
-    } else if (movie.url) {
-      toast("Opening external link...");
-      window.open(movie.url, "_blank");
-      return;
-    } else {
-      toast("❌ No video source available");
-      return;
-    }
+  function play(m) {
+    const c=document.getElementById("player-container");
+    if(m.youtube_id) c.innerHTML=`<iframe src="https://www.youtube.com/embed/${m.youtube_id}?autoplay=1"></iframe>`;
+    else if(m.direct_download&&m.direct_download.endsWith('.mp4')) c.innerHTML=`<video controls autoplay><source src="${m.direct_download}"></video>`;
+    else { window.open(m.url,"_blank"); return; }
     openModal("video-modal");
   }
 
   async function download(id) {
-    if(!token) { toast("🔒 Please Login to Download"); return openModal("auth-modal"); }
+    if(!token){ toast("🔒 Login required"); return openModal("auth-modal"); }
     try {
-      const res = await fetch(`${API}/movies/download/${id}`, { method: "POST", headers: { "Authorization": token } });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data.detail);
-      window.open(data.url, "_blank");
-      toast("✅ Download Started! -1 Token");
-      // Update local token count visually
-      tokens--; document.getElementById("t-count").textContent = tokens;
-    } catch(err) { toast("❌ " + err.message); }
+      const r=await fetch(`${API}/movies/download/${id}`,{method:"POST",headers:{Authorization:token}});
+      const d=await r.json(); if(!r.ok) throw new Error(d.detail);
+      window.open(d.url,"_blank"); toast("✅ Download started");
+    } catch(err){ toast("❌ "+err.message); }
   }
 
-  // --- Admin Functions ---
-  document.addEventListener("keydown", e => {
-    if(e.ctrlKey && e.shiftKey && e.key === "A") {
-      e.preventDefault();
-      openModal("admin-modal");
-    }
-  });
-
-  async function loadAdminMovies() {
-    try {
-      const res = await fetch(`${API}/admin/movies`, { headers: { "X-Secret": ADMIN_SECRET } });
-      const data = await res.json();
-      const tbody = document.querySelector("#admin-table tbody");
-      if(!data.length) { tbody.innerHTML = "<tr><td colspan='3' style='text-align:center'>Empty</td></tr>"; return; }
-      tbody.innerHTML = data.map(m => `
-        <tr>
-          <td>${m.title}</td>
-          <td><span style="color:${m.content_type==='full_movie'?'var(--cyan)':'var(--purple)'}">${m.content_type}</span></td>
-          <td><button class="btn btn-del" onclick="deleteMovie(${m.id})">Del</button></td>
-        </tr>
-      `).join('');
-    } catch(err) { console.error(err); }
+  function updateUI() {
+    if(token){ document.getElementById("auth-btn").style.display="none"; document.getElementById("user-info").style.display="block"; }
   }
 
-  async function addMovie() {
-    const payload = {
-      title: document.getElementById("new-title").value,
-      year: parseInt(document.getElementById("new-year").value) || 2024,
-      category: "General",
-      content_type: document.getElementById("new-type").value,
-      license_type: "Custom",
-      youtube_id: document.getElementById("new-yt").value,
-      url: "",
-      thumbnail: document.getElementById("new-thumb").value,
-      duration: "PT0M",
-      direct_download: document.getElementById("new-dl").value
-    };
-    
-    if(!payload.title) return toast("Title required");
-
-    try {
-      const res = await fetch(`${API}/admin/movies`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Secret": ADMIN_SECRET },
-        body: JSON.stringify(payload)
-      });
-      if(res.ok) {
-        toast("✅ Movie Added");
-        loadAdminMovies();
-        loadMovies(); loadTrailers();
-        document.querySelectorAll("#admin-modal input").forEach(i => i.value = "");
-      } else { toast("❌ Failed"); }
-    } catch(err) { toast("❌ Error"); }
+  // Admin
+  document.addEventListener("keydown",e=>{if(e.ctrlKey&&e.shiftKey&&e.key==="A"){e.preventDefault();openModal("admin-modal");}});
+  async function loadAdminMovies(){
+    try{const r=await fetch(`${API}/admin/movies`,{headers:{"X-Secret":ADMIN_SECRET}});const d=await r.json();
+    document.querySelector("#admin-table tbody").innerHTML=d.map(m=>`<tr><td>${m.title}</td><td><button class="btn btn-dl" style="background:red;width:auto;padding:2px 5px;" onclick="deleteMovie(${m.id})">Del</button></td></tr>`).join('');}catch(err){}
   }
-
-  async function deleteMovie(id) {
-    if(!confirm("Delete this item?")) return;
-    try {
-      const res = await fetch(`${API}/admin/movies/${id}`, { method: "DELETE", headers: { "X-Secret": ADMIN_SECRET } });
-      if(res.ok) { toast("✅ Deleted"); loadAdminMovies(); loadMovies(); loadTrailers(); }
-    } catch(err) { toast("❌ Error"); }
+  async function addMovie(){
+    const p={title:document.getElementById("new-title").value,year:2024,category:"Gen",content_type:document.getElementById("new-type").value,license_type:"CC",youtube_id:document.getElementById("new-yt").value,url:"",thumbnail:document.getElementById("new-thumb").value,duration:"",direct_download:document.getElementById("new-dl").value};
+    try{await fetch(`${API}/admin/movies`,{method:"POST",headers:{"Content-Type":"application/json","X-Secret":ADMIN_SECRET},body:JSON.stringify(p)});toast("✅ Added");loadAdminMovies();loadMovies();}catch(err){toast("❌ Error");}
   }
+  async function deleteMovie(id){if(confirm("Delete?")){await fetch(`${API}/admin/movies/${id}`,{method:"DELETE",headers:{"X-Secret":ADMIN_SECRET}});loadAdminMovies();loadMovies();}}
+  async function triggerAgent(){toast("🤖 Running...");await fetch(`${API}/admin/trigger-agent`,{method:"POST",headers:{"X-Secret":ADMIN_SECRET}});setTimeout(loadLogs,1000);}
+  async function loadLogs(){try{const r=await fetch(`${API}/admin/logs`,{headers:{"X-Secret":ADMIN_SECRET}});const d=await r.json();document.getElementById("agent-logs").innerHTML=d.map(l=>`<div>[${l.timestamp.split('T')[1].split('.')[0]}] ${l.task}: ${l.details}</div>`).join('');}catch(err){}}
 
-  async function triggerAgent() {
-    toast("🤖 Agent started...");
-    document.getElementById("agent-logs").innerHTML = "<div style='color:#aaa'>Running...</div>";
-    try {
-      await fetch(`${API}/admin/trigger-agent`, { method: "POST", headers: { "X-Secret": ADMIN_SECRET } });
-      setTimeout(loadLogs, 1500);
-    } catch(err) { toast("❌ Failed to trigger"); }
-  }
-
-  async function loadLogs() {
-    try {
-      const res = await fetch(`${API}/admin/logs`, { headers: { "X-Secret": ADMIN_SECRET } });
-      const logs = await res.json();
-      const container = document.getElementById("agent-logs");
-      if(!logs.length) { container.innerHTML = "<div style='color:#666; text-align:center; padding-top:80px;'>No logs yet.</div>"; return; }
-      container.innerHTML = logs.map(l => `
-        <div class="log-entry">
-          <span class="log-time">[${l.timestamp.split('T')[1].split('.')[0]}]</span> 
-          <strong style="color:${l.status==='error'?'red':'#fff'}">${l.task.toUpperCase()}</strong>: ${l.details}
-        </div>
-      `).join('');
-    } catch(err) { console.error(err); }
-  }
-
-  // Init
-  window.onload = () => {
-    loadMovies();
-    loadTrailers();
-    if(token) updateUI();
-  };
+  window.onload=()=>{loadMovies();loadTrailers();if(token)updateUI();};
 </script>
-  // --- Agent Functions ---
-async function triggerAgent() {
-  toast("🤖 Agent started...");
-  try {
-    await fetch(`${API}/admin/trigger-agent`, { method: "POST", headers: { "X-Secret": ADMIN_SECRET } });
-    setTimeout(loadLogs, 1000); // Wait 1s then refresh logs
-  } catch(err) { toast("❌ Failed to trigger"); }
-}
-
-async function loadLogs() {
-  try {
-    const res = await fetch(`${API}/admin/logs`, { headers: { "X-Secret": ADMIN_SECRET } });
-    const logs = await res.json();
-    const container = document.getElementById("agent-logs");
-    container.innerHTML = logs.map(l => `
-      <div style="border-bottom:1px solid #333; padding:2px;">
-        <span style="color:#888">[${l.timestamp.split('T')[1].split('.')[0]}]</span> 
-        <strong>${l.task}</strong>: ${l.details}
-      </div>
-    `).join('');
-  } catch(err) { console.error(err); }
-}
-
-// Update loadAdminMovies to also load logs
-const originalLoadAdmin = loadAdminMovies; // Keep reference if needed, or just call both
-// In your existing openModal logic for admin, add:
-// if(id === 'admin-modal') { loadAdminMovies(); loadLogs(); }
 </body>
 </html>
